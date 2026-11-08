@@ -1,0 +1,325 @@
+{
+  "summary": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "start_time": "2026-11-05T16:41:00.080391+00:00",
+    "end_time": "2026-11-05T16:49:06.760996+00:00",
+    "total_duration_seconds": 486.68
+  },
+  "stages": {
+    "Startup & Health": [
+      {
+        "test_name": "FastAPI Health & MongoDB Connection",
+        "status": "PASS",
+        "duration_seconds": 3.267,
+        "input": null,
+        "output": {
+          "status": "ok",
+          "service": "CrowdWisdom AI Studio",
+          "version": "1.0.0",
+          "database": "connected",
+          "environment": "development"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:41:03.348456+00:00"
+      },
+      {
+        "test_name": "Integration Credentials Availability",
+        "status": "PASS",
+        "duration_seconds": 0.267,
+        "input": null,
+        "output": {
+          "openrouter": true,
+          "apify": true,
+          "tavily": true,
+          "exa": true,
+          "nvidia_nim": true
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:41:03.615443+00:00"
+      }
+    ],
+    "Hermes Runtime": [
+      {
+        "test_name": "Hermes Native AIAgent Tool Execution",
+        "status": "PASS",
+        "duration_seconds": 11.433,
+        "input": null,
+        "output": {
+          "execution_id": "6aecb1aba2ae3588b32c6040",
+          "mode": "native_hermes",
+          "response": "The CrowdWisdom trading signal conviction rating is 7.65/10.0 with a status of BULLISH_CONSENSUS."
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:41:15.120474+00:00"
+      }
+    ],
+    "Stage A: Campaign Creation": [
+      {
+        "test_name": "Campaign Persistence & Schema Serialization",
+        "status": "PASS",
+        "duration_seconds": 0.178,
+        "input": {
+          "name": "E2E Smoke Campaign \u2014 Alpha Momentum 261105_164115"
+        },
+        "output": {
+          "id": "6aecb1aba2ae3588b32c6041",
+          "status": "draft"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:41:15.298920+00:00"
+      }
+    ],
+    "Stage B: Ads Manager Agent": [
+      {
+        "test_name": "Apify Scraping, 30-Day Window & JSON Export",
+        "status": "PASS",
+        "duration_seconds": 93.5,
+        "input": null,
+        "output": {
+          "ads_found": 0,
+          "insights": 0,
+          "export_path": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\storage\\e2e_smoke_test\\exported_advertisements.json"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:42:48.799201+00:00"
+      }
+    ],
+    "Stage C: Script Agent": [
+      {
+        "test_name": "Checkpoint 1: Creative Brief Synthesis & Approval",
+        "status": "PASS",
+        "duration_seconds": 6.464,
+        "input": null,
+        "output": {
+          "brief_id": "6aecb20fa2ae3588b32c6047",
+          "status": "approved"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:42:55.263842+00:00"
+      },
+      {
+        "test_name": "Script Generation (PAIN_POINT + JSON Export)",
+        "status": "PASS",
+        "duration_seconds": 29.696,
+        "input": null,
+        "output": {
+          "script_id": "6aecb20fa2ae3588b32c6048",
+          "scenes": 5,
+          "title": "Cut Through the Noise"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:43:24.961557+00:00"
+      },
+      {
+        "test_name": "Script Generation (UNIQUE_DATA + JSON Export)",
+        "status": "PASS",
+        "duration_seconds": 10.099,
+        "input": null,
+        "output": {
+          "script_id": "6aecb22ca2ae3588b32c6054",
+          "scenes": 4,
+          "title": "Unlock the Wisdom of the Crowd"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:43:35.060151+00:00"
+      },
+      {
+        "test_name": "Script Generation (PRODUCT_VALUE + JSON Export)",
+        "status": "PASS",
+        "duration_seconds": 21.541,
+        "input": null,
+        "output": {
+          "script_id": "6aecb237a2ae3588b32c605e",
+          "scenes": 4,
+          "title": "Find Clarity in the Chaos"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:43:56.601087+00:00"
+      }
+    ],
+    "Stage D: Human Approval Gate": [
+      {
+        "test_name": "Checkpoint 2: Incomplete Storyboard Rejection (HTTP 400)",
+        "status": "PASS",
+        "duration_seconds": 0.112,
+        "input": {
+          "dummy_id": "6aecb24ca2ae3588b32c6070"
+        },
+        "output": {
+          "rejected": true
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:43:56.713426+00:00"
+      },
+      {
+        "test_name": "Checkpoint 2: Valid Storyboard Approval",
+        "status": "PASS",
+        "duration_seconds": 0.287,
+        "input": null,
+        "output": {
+          "script_id": "6aecb20fa2ae3588b32c6048",
+          "status": "approved"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:43:57.000056+00:00"
+      }
+    ],
+    "Stage E: Video Production Agent": [
+      {
+        "test_name": "Render & Media Probe (30s Commercial)",
+        "status": "PASS",
+        "duration_seconds": 72.085,
+        "input": {
+          "target_duration": 30,
+          "aspect_ratio": "9:16"
+        },
+        "output": {
+          "file_path": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\media\\videos\\e2e_smoke_30s_261105_164115.mp4",
+          "duration_seconds": 30.0,
+          "resolution": "1080x1920",
+          "video_codec": "h264",
+          "audio_codec": "aac",
+          "has_audio": true,
+          "fps": 24.0,
+          "file_size_bytes": 917738,
+          "file_size_mb": 0.88
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:45:09.195487+00:00"
+      },
+      {
+        "test_name": "Render & Media Probe (45s Commercial)",
+        "status": "PASS",
+        "duration_seconds": 101.972,
+        "input": {
+          "target_duration": 45,
+          "aspect_ratio": "9:16"
+        },
+        "output": {
+          "file_path": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\media\\videos\\e2e_smoke_45s_261105_164115.mp4",
+          "duration_seconds": 45.0,
+          "resolution": "1080x1920",
+          "video_codec": "h264",
+          "audio_codec": "aac",
+          "has_audio": true,
+          "fps": 24.0,
+          "file_size_bytes": 1384288,
+          "file_size_mb": 1.32
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:46:51.256187+00:00"
+      },
+      {
+        "test_name": "Render & Media Probe (60s Commercial)",
+        "status": "PASS",
+        "duration_seconds": 134.406,
+        "input": {
+          "target_duration": 60,
+          "aspect_ratio": "9:16"
+        },
+        "output": {
+          "file_path": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\media\\videos\\e2e_smoke_60s_261105_164115.mp4",
+          "duration_seconds": 60.0,
+          "resolution": "1080x1920",
+          "video_codec": "h264",
+          "audio_codec": "aac",
+          "has_audio": true,
+          "fps": 24.0,
+          "file_size_bytes": 1619513,
+          "file_size_mb": 1.54
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:49:05.775323+00:00"
+      }
+    ],
+    "Stage F: Video Streaming & Playback": [
+      {
+        "test_name": "Video Endpoint Full Request (HTTP 200)",
+        "status": "PASS",
+        "duration_seconds": 0.016,
+        "input": null,
+        "output": {
+          "status_code": 200,
+          "content_length": 1384288,
+          "accept_ranges": "bytes"
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:49:05.862726+00:00"
+      },
+      {
+        "test_name": "Video Endpoint Range Streaming (HTTP 206)",
+        "status": "PASS",
+        "duration_seconds": 0.003,
+        "input": {
+          "Range": "bytes=0-1023"
+        },
+        "output": {
+          "status_code": 206,
+          "content_range": "bytes 0-1023/1384288",
+          "bytes_received": 1024
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:49:05.862742+00:00"
+      }
+    ],
+    "Stage G: Database & Kanban Persistence": [
+      {
+        "test_name": "Database Referential Integrity & Kanban Persistence",
+        "status": "PASS",
+        "duration_seconds": 0.37,
+        "input": null,
+        "output": {
+          "campaign_id": "6aecb1aba2ae3588b32c6041",
+          "scripts_count": 4,
+          "video_jobs_count": 3,
+          "kanban_tasks_count": 5
+        },
+        "error": null,
+        "timestamp": "2026-11-05T16:49:06.232587+00:00"
+      }
+    ],
+    "Stage H: Failure & Edge Cases": [
+      {
+        "test_name": "Invalid Campaign ID Handling (HTTP 400)",
+        "status": "PASS",
+        "duration_seconds": 0.044,
+        "input": null,
+        "output": null,
+        "error": null,
+        "timestamp": "2026-11-05T16:49:06.276943+00:00"
+      },
+      {
+        "test_name": "Non-existent Campaign Handling (HTTP 404)",
+        "status": "PASS",
+        "duration_seconds": 0.116,
+        "input": null,
+        "output": null,
+        "error": null,
+        "timestamp": "2026-11-05T16:49:06.393113+00:00"
+      },
+      {
+        "test_name": "Unauthorized Access Rejection (HTTP 401)",
+        "status": "PASS",
+        "duration_seconds": 0.002,
+        "input": null,
+        "output": null,
+        "error": null,
+        "timestamp": "2026-11-05T16:49:06.394822+00:00"
+      },
+      {
+        "test_name": "Boot Recovery Stale Threshold Safety",
+        "status": "PASS",
+        "duration_seconds": 0.366,
+        "input": null,
+        "output": null,
+        "error": null,
+        "timestamp": "2026-11-05T16:49:06.760877+00:00"
+      }
+    ]
+  },
+  "verdict": "PASS"
+}

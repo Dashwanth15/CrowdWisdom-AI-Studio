@@ -1,0 +1,15 @@
+{
+  "include": [
+    "backend"
+  ],
+  "extraPaths": [
+    "./backend",
+    "./backend/vendor/hermes_agent",
+    "./backend/video_engine/openmontage"
+  ],
+  "typeCheckingMode": "off",
+  "reportMissingImports": "none",
+  "reportOptionalSubscript": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportGeneralTypeIssues": "none"
+}

@@ -1,0 +1,103 @@
+{
+  "audit_name": "CrowdWisdom AI Studio \u2014 End-to-End Cinematic Video Quality Audit",
+  "timestamp": "2026-11-05T20:12:27.457564+00:00",
+  "campaign_id": "6aece21b17f89bb68afc78ca",
+  "script_id": "6aece21b17f89bb68afc78cc",
+  "video_job_id": "6aece23317f89bb68afc78d5",
+  "workflow_verdicts": {
+    "checkpoint_1_creative_brief": "PASSED (Synthesized & Approved)",
+    "checkpoint_2_storyboard_visual_gate": "PASSED (All 4 scenes possess verified 1080x1920 on-disk visual stills)",
+    "checkpoint_3_video_production": "PASSED (Completed 60s vertical MP4)",
+    "zero_text_only_compliance": "PASSED (Every scene contains photorealistic financial AI imagery with Ken Burns motion & frosted overlays)",
+    "duration_compliance": "PASSED (60.00s within 60.0s \u00b1 0.5s tolerance)"
+  },
+  "performance": {
+    "start_time": "2026-11-05T20:07:55.273273+00:00",
+    "stages": {
+      "campaign_creation_s": 0.05,
+      "script_generation_total_s": 24.07,
+      "video_rendering_total_s": 246.09
+    },
+    "end_time": "2026-11-05T20:12:27.457026+00:00",
+    "total_workflow_elapsed_s": 272.18
+  },
+  "video_validation": {
+    "verified_file": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\storage\\visual_quality_audit\\fresh_60s_cinematic_commercial.mp4",
+    "target_duration_seconds": 60.0,
+    "actual_duration_seconds": 60.0,
+    "duration_delta_seconds": 0.0,
+    "tolerance_passed": true,
+    "resolution": "1080x1920",
+    "aspect_ratio": "9:16",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "bitrate_kbps": 4503.0,
+    "file_size_mb": 32.21,
+    "streams_count": 2,
+    "ffprobe_verified": true
+  },
+  "streaming_validation": {
+    "notice": "HTTP Error 404: Not Found"
+  },
+  "scene_assets": [
+    {
+      "scene_number": 1,
+      "duration_seconds": 10,
+      "visual_description": "A frenetic, neon-lit trading floor with screens flashing red and green",
+      "camera_motion": "slow_zoom_in",
+      "visual_asset_path": "media\\assets\\asset_6aece21b17f89bb68afc78cc_1_512283b0.jpg",
+      "visual_asset_url": "/media/assets/asset_6aece21b17f89bb68afc78cc_1_512283b0.jpg",
+      "visual_asset_status": "completed",
+      "provider": "pollinations_flux",
+      "file_exists": true,
+      "file_size_kb": 228.0,
+      "dimensions": "1080x1920"
+    },
+    {
+      "scene_number": 2,
+      "duration_seconds": 15,
+      "visual_description": "A close-up of the trader's face, eyes widening in overwhelm as they scan multiple screens",
+      "camera_motion": "pan_right",
+      "visual_asset_path": "media\\assets\\asset_6aece21b17f89bb68afc78cc_2_f271cf6b.jpg",
+      "visual_asset_url": "/media/assets/asset_6aece21b17f89bb68afc78cc_2_f271cf6b.jpg",
+      "visual_asset_status": "completed",
+      "provider": "pollinations_flux",
+      "file_exists": true,
+      "file_size_kb": 201.3,
+      "dimensions": "1080x1920"
+    },
+    {
+      "scene_number": 3,
+      "duration_seconds": 20,
+      "visual_description": "A calm, serene environment, with a single screen displaying the CrowdWisdomTrading platform",
+      "camera_motion": "slow_zoom_in",
+      "visual_asset_path": "media\\assets\\asset_6aece21b17f89bb68afc78cc_3_405e38a5.jpg",
+      "visual_asset_url": "/media/assets/asset_6aece21b17f89bb68afc78cc_3_405e38a5.jpg",
+      "visual_asset_status": "completed",
+      "provider": "pollinations_flux",
+      "file_exists": true,
+      "file_size_kb": 238.9,
+      "dimensions": "1080x1920"
+    },
+    {
+      "scene_number": 4,
+      "duration_seconds": 15,
+      "visual_description": "A montage of traders using the platform, with neon cyan data visualizations and animations",
+      "camera_motion": "pan_right",
+      "visual_asset_path": "media\\assets\\asset_6aece21b17f89bb68afc78cc_4_be864b21.jpg",
+      "visual_asset_url": "/media/assets/asset_6aece21b17f89bb68afc78cc_4_be864b21.jpg",
+      "visual_asset_status": "completed",
+      "provider": "pollinations_flux",
+      "file_exists": true,
+      "file_size_kb": 238.9,
+      "dimensions": "1080x1920"
+    }
+  ],
+  "extracted_frames": [
+    "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\storage\\visual_quality_audit\\extracted_video_frames\\hook_t03s.png",
+    "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\storage\\visual_quality_audit\\extracted_video_frames\\problem_t18s.png",
+    "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\storage\\visual_quality_audit\\extracted_video_frames\\solution_t38s.png",
+    "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\storage\\visual_quality_audit\\extracted_video_frames\\cta_t56s.png"
+  ],
+  "contact_sheet": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\storage\\visual_quality_audit\\video_contact_sheet.png"
+}

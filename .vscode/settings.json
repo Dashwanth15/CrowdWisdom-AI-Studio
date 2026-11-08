@@ -1,0 +1,25 @@
+{
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none",
+    "reportOptionalSubscript": "none",
+    "reportOptionalMemberAccess": "none",
+    "reportGeneralTypeIssues": "none"
+  },
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend",
+    "${workspaceFolder}/backend/vendor/hermes_agent",
+    "${workspaceFolder}/backend/video_engine/openmontage"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/backend",
+    "${workspaceFolder}/backend/vendor/hermes_agent",
+    "${workspaceFolder}/backend/video_engine/openmontage"
+  ],
+  "pyrefly.typeCheckingMode": "off",
+  "pyrefly.extraPaths": [
+    "${workspaceFolder}/backend",
+    "${workspaceFolder}/backend/vendor/hermes_agent",
+    "${workspaceFolder}/backend/video_engine/openmontage"
+  ]
+}

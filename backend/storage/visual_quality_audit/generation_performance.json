@@ -1,0 +1,10 @@
+{
+  "start_time": "2026-11-05T20:07:55.273273+00:00",
+  "stages": {
+    "campaign_creation_s": 0.05,
+    "script_generation_total_s": 24.07,
+    "video_rendering_total_s": 246.09
+  },
+  "end_time": "2026-11-05T20:12:27.457026+00:00",
+  "total_workflow_elapsed_s": 272.18
+}

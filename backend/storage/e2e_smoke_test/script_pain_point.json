@@ -1,0 +1,116 @@
+{
+  "exported_at": "2026-11-05T16:43:24.958484+00:00",
+  "script_id": "6aecb20fa2ae3588b32c6048",
+  "script": {
+    "id": "6aecb20fa2ae3588b32c6048",
+    "campaign_id": "6aecb1aba2ae3588b32c6041",
+    "approach": "pain_point",
+    "status": "pending_approval",
+    "version": 1,
+    "title": "Cut Through the Noise",
+    "campaign_title": "Cut Through the Noise",
+    "target_audience": "retail_traders, options_traders, swing_traders",
+    "pain_point": "Information overload and difficulty making informed trading decisions",
+    "marketing_angle": "CrowdWisdomTrading as a solution to cut through market noise and provide clarity",
+    "core_message": "Make informed trading decisions with the power of collective intelligence",
+    "unique_selling_proposition": "Get access to real-time market sentiment and insights from professional traders",
+    "emotional_direction": "Empowerment and confidence",
+    "visual_hook": "A visually stunning representation of a trader surrounded by screens and charts, with a wave of cyan-emerald neon light washing over them",
+    "full_script": "In a market that moves fast, it's easy to get lost in the noise But what if you could tap into the wisdom of the crowd? With CrowdWisdomTrading, you get real-time market sentiment and insights from professional traders Make informed trading decisions with confidence",
+    "scenes": [
+      {
+        "scene_number": 1,
+        "duration_seconds": 5.0,
+        "visual_description": "A close-up shot of a trader's face, surrounded by multiple screens and charts, with a look of frustration and overwhelm",
+        "camera_direction": "Close-up, with a slow zoom out to reveal the chaos",
+        "voiceover": "In a market that moves fast, it's easy to get lost in the noise",
+        "on_screen_text": "",
+        "audio_direction": "Ominous, pulsing sound effects",
+        "transition": "Dissolve",
+        "asset_references": []
+      },
+      {
+        "scene_number": 2,
+        "duration_seconds": 10.0,
+        "visual_description": "A wide shot of the trader, surrounded by screens, with a wave of cyan-emerald neon light washing over them, representing the power of collective intelligence",
+        "camera_direction": "Wide shot, with a slow zoom in on the trader's face",
+        "voiceover": "But what if you could tap into the wisdom of the crowd?",
+        "on_screen_text": "CrowdWisdomTrading",
+        "audio_direction": "Ethereal, uplifting sound effects",
+        "transition": "Dissolve",
+        "asset_references": []
+      },
+      {
+        "scene_number": 3,
+        "duration_seconds": 15.0,
+        "visual_description": "A montage of traders using CrowdWisdomTrading, with visualizations of market sentiment and insights on screen",
+        "camera_direction": "Fast-paced cuts, with a mix of close-ups and wide shots",
+        "voiceover": "With CrowdWisdomTrading, you get real-time market sentiment and insights from professional traders",
+        "on_screen_text": "Real-time market sentiment",
+        "audio_direction": "Upbeat, energetic sound effects",
+        "transition": "Cut",
+        "asset_references": []
+      },
+      {
+        "scene_number": 4,
+        "duration_seconds": 10.0,
+        "visual_description": "A shot of the trader, now confident and empowered, with a calm and focused expression",
+        "camera_direction": "Close-up, with a slow zoom out to reveal a clean and organized workspace",
+        "voiceover": "Make informed trading decisions with confidence",
+        "on_screen_text": "Start your free trial today",
+        "audio_direction": "Calming, uplifting sound effects",
+        "transition": "Fade to black",
+        "asset_references": []
+      },
+      {
+        "scene_number": 5,
+        "duration_seconds": 5.0,
+        "visual_description": "A final shot of the CrowdWisdomTrading logo, with a call-to-action to start a free trial",
+        "camera_direction": "Static shot",
+        "voiceover": "",
+        "on_screen_text": "CrowdWisdomTrading. Cut through the noise.",
+        "audio_direction": "Subtle ambient synthesizer with crisp UI audio haptics",
+        "transition": "Smooth cross-dissolve",
+        "asset_references": []
+      }
+    ],
+    "voiceover_full": "In a market that moves fast, it's easy to get lost in the noise. But what if you could tap into the wisdom of the crowd? With CrowdWisdomTrading, you get real-time market sentiment and insights from professional traders. Make informed trading decisions with confidence. Start your free trial today.",
+    "on_screen_texts": [
+      "CrowdWisdomTrading",
+      "Real-time market sentiment",
+      "Insights from professional traders",
+      "Start your free trial today",
+      "CrowdWisdomTrading. Cut through the noise."
+    ],
+    "music_direction": "Ominous and pulsing, transitioning to ethereal and uplifting, and finally calming and confident",
+    "sound_effects": [
+      "Pulsing sound effects",
+      "Ethereal sound effects",
+      "Upbeat sound effects",
+      "Calming sound effects"
+    ],
+    "call_to_action": "Start your free trial today",
+    "estimated_duration_seconds": 45,
+    "research_references": [
+      "https://www.facebook.com/einsteinofwallstreet/posts/this-market-is-moving-fast-and-many-traders-are-getting-left-behindchoppy-price-/1468829718364215",
+      "https://www.linkedin.com/pulse/retail-traders-reinventing-markets-phillipcapital-en6ef",
+      "https://memx.com/insights/retail-trading-insights",
+      "https://www.youtube.com/watch?v=NKuGAw1Pdjk",
+      "https://finance.yahoo.com/markets/article/retail-investors-are-getting-worried-140335807.html",
+      "https://purepowerpicks.com/top-10-reasons-stock-and-options-trading-is-challenging",
+      "https://public.com/learn/understanding-the-risks-of-options-trading",
+      "https://www.youtube.com/watch?v=7PM4rNDr4oI",
+      "https://www.youtube.com/watch?v=vjCbBGf6rDQ&vl=en-US",
+      "https://www.ziprecruiter.com/e/futures-options-trading-what-are-some-common-challenges-faced-by-professionals-in-futures-options-trading-and-how-can-they-be-addressed"
+    ],
+    "supporting_evidence": [
+      "Research shows that retail traders are getting worried about market volatility",
+      "Options trading can be complex and challenging for beginners"
+    ],
+    "approved_by": null,
+    "approved_at": null,
+    "rejection_reason": null,
+    "created_at": "2026-11-05T16:42:55.265000",
+    "updated_at": "2026-11-05T16:43:24.472000"
+  }
+}

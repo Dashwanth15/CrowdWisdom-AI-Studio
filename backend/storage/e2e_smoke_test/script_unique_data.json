@@ -1,0 +1,110 @@
+{
+  "exported_at": "2026-11-05T16:43:35.058894+00:00",
+  "script_id": "6aecb22ca2ae3588b32c6054",
+  "script": {
+    "id": "6aecb22ca2ae3588b32c6054",
+    "campaign_id": "6aecb1aba2ae3588b32c6041",
+    "approach": "unique_data",
+    "status": "pending_approval",
+    "version": 1,
+    "title": "Unlock the Wisdom of the Crowd",
+    "campaign_title": "Unlock the Wisdom of the Crowd",
+    "target_audience": "retail_traders, options_traders, swing_traders",
+    "pain_point": "Information overload and conflicting market signals",
+    "marketing_angle": "Harness the power of collective intelligence for informed trading decisions",
+    "core_message": "CrowdWisdomTrading helps you cut through the noise and make data-driven trades",
+    "unique_selling_proposition": "Proprietary market sentiment and crowd-based insights for retail traders and investors",
+    "emotional_direction": "Empowerment and confidence in trading decisions",
+    "visual_hook": "A futuristic, neon-lit trading floor with a solitary figure surrounded by swirling market data",
+    "full_script": "A cinematic thriller that takes the viewer on a journey from chaos to clarity",
+    "scenes": [
+      {
+        "scene_number": 1,
+        "duration_seconds": 5.0,
+        "visual_description": "A close-up shot of a trader's face, surrounded by multiple screens displaying chaotic market data",
+        "camera_direction": "Dutch angle, handheld camera",
+        "voiceover": "In a world where information is power...",
+        "on_screen_text": "Information Overload",
+        "audio_direction": "Distorted, pulsing sound effects",
+        "transition": "Quick cut to a wide shot of the trading floor",
+        "asset_references": [
+          "trader_face",
+          "market_data_screens"
+        ]
+      },
+      {
+        "scene_number": 2,
+        "duration_seconds": 10.0,
+        "visual_description": "A wide shot of the trading floor, with the solitary figure standing out amidst the chaos",
+        "camera_direction": "Static, high-angle shot",
+        "voiceover": "It's hard to know what's real and what's just noise.",
+        "on_screen_text": "CrowdWisdomTrading",
+        "audio_direction": "Echoing sound effects, hinting at the presence of a larger crowd",
+        "transition": "Fade-in of the CrowdWisdomTrading logo",
+        "asset_references": [
+          "trading_floor",
+          "CrowdWisdomTrading_logo"
+        ]
+      },
+      {
+        "scene_number": 3,
+        "duration_seconds": 15.0,
+        "visual_description": "A split-screen montage of various market data visualizations, showcasing CrowdWisdomTrading's features",
+        "camera_direction": "Fast-paced cuts, dynamic camera movements",
+        "voiceover": "But what if you could tap into the collective intelligence of the crowd?",
+        "on_screen_text": "CrowdPulse, Weekly/Daily Wisdom, CrowdMap, Pro Crowd Bars",
+        "audio_direction": "Pulsating, futuristic sound effects",
+        "transition": "Quick cuts between different visualizations",
+        "asset_references": [
+          "CrowdPulse_visualization",
+          "Weekly_Daily_Wisdom_visualization",
+          "CrowdMap_visualization",
+          "Pro_Crowd_Bars_visualization"
+        ]
+      },
+      {
+        "scene_number": 4,
+        "duration_seconds": 15.0,
+        "visual_description": "A close-up shot of the trader's face, now calm and confident, with a hint of a smile",
+        "camera_direction": "Static, straight-on shot",
+        "voiceover": "Empowered by the wisdom of the crowd, you can make informed trades with confidence.",
+        "on_screen_text": "Unlock the Wisdom of the Crowd",
+        "audio_direction": "Soaring, uplifting sound effects",
+        "transition": "Fade-out to the CrowdWisdomTrading logo and tagline",
+        "asset_references": [
+          "trader_face_confident",
+          "CrowdWisdomTrading_tagline"
+        ]
+      }
+    ],
+    "voiceover_full": "A deep, commanding voice, conveying a sense of authority and trust",
+    "on_screen_texts": [
+      "Information Overload",
+      "CrowdWisdomTrading",
+      "CrowdPulse",
+      "Weekly/Daily Wisdom",
+      "CrowdMap",
+      "Pro Crowd Bars",
+      "Unlock the Wisdom of the Crowd"
+    ],
+    "music_direction": "A pulsating, futuristic electronic soundtrack, incorporating sound effects to enhance the visualizations",
+    "sound_effects": [
+      "Distorted, pulsing sounds",
+      "Echoing sounds",
+      "Pulsating, futuristic sounds",
+      "Soaring, uplifting sounds"
+    ],
+    "call_to_action": "Sign up for a free trial today and unlock the wisdom of the crowd",
+    "estimated_duration_seconds": 45,
+    "research_references": [],
+    "supporting_evidence": [
+      "CrowdWisdomTrading's proprietary market sentiment and crowd-based insights",
+      "Real-time market data visualizations"
+    ],
+    "approved_by": null,
+    "approved_at": null,
+    "rejection_reason": null,
+    "created_at": "2026-11-05T16:43:24.961000",
+    "updated_at": "2026-11-05T16:43:34.578000"
+  }
+}

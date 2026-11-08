@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root,
+  .dark {
+    /* Midnight Executive Design System Palette */
+    --background: 223 30% 4.5%;      /* #080A0F Main background */
+    --foreground: 220 14% 95.5%;     /* #F2F3F5 Primary text */
+    --card: 216 19% 10.2%;          /* #15191F Card surface */
+    --card-foreground: 220 14% 95.5%; /* #F2F3F5 Primary text */
+    --popover: 217 19% 13.1%;        /* #1B2028 Elevated popover */
+    --popover-foreground: 220 14% 95.5%;
+    --primary: 216 40% 52.7%;        /* #547DB8 Primary slate blue accent */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 19% 13.1%;      /* #1B2028 Elevated surface */
+    --secondary-foreground: 220 14% 95.5%;
+    --muted: 216 19% 17.1%;          /* #232A34 Hover/muted surface */
+    --muted-foreground: 217 10% 66.3%; /* #A0A7B2 Secondary text */
+    --accent: 216 19% 17.1%;         /* #232A34 Interactive surface */
+    --accent-foreground: 220 14% 95.5%;
+    --destructive: 356 57% 62.9%;    /* #D66C73 Error red */
+    --destructive-foreground: 0 0% 100%;
+    --border: 219 15% 18.8%;         /* #292E37 Refined border */
+    --input: 219 15% 18.8%;          /* #292E37 Input border */
+    --ring: 216 40% 52.7%;           /* #547DB8 Focus ring */
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-[#080A0F] text-[#F2F3F5] font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom Executive Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0C0F14;
+}
+::-webkit-scrollbar-thumb {
+  background: #292E37;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3B424F;
+}
+
+/* Tabular Numerals for Financial Data & KPIs */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Midnight Glass Surfaces */
+.glass-panel {
+  background: rgba(21, 25, 31, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #292E37;
+}
+
+.glass-panel-elevated {
+  background: rgba(27, 32, 40, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #3B424F;
+}
+
+/* Subtle Champagne Highlight Effect */
+.champagne-glow {
+  box-shadow: 0 0 15px -3px rgba(197, 164, 109, 0.15);
+}
+
+.champagne-border {
+  border-color: rgba(197, 164, 109, 0.35);
+}
+
+/* Blue Accent Glow */
+.accent-glow {
+  box-shadow: 0 0 20px -5px rgba(84, 125, 184, 0.25);
+}

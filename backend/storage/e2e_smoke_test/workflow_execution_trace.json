@@ -1,0 +1,78 @@
+[
+  {
+    "timestamp": "2026-11-05T16:41:15.298887+00:00",
+    "step": "campaign_created",
+    "details": {
+      "campaign_id": "6aecb1aba2ae3588b32c6041",
+      "name": "E2E Smoke Campaign \u2014 Alpha Momentum 261105_164115"
+    }
+  },
+  {
+    "timestamp": "2026-11-05T16:42:48.799160+00:00",
+    "step": "research_completed",
+    "details": {
+      "job_id": "6aecb1aba2ae3588b32c6042",
+      "ads_count": 0,
+      "insights_count": 0
+    }
+  },
+  {
+    "timestamp": "2026-11-05T16:43:24.961520+00:00",
+    "step": "script_pain_point_generated",
+    "details": {
+      "script_id": "6aecb20fa2ae3588b32c6048",
+      "scenes": 5
+    }
+  },
+  {
+    "timestamp": "2026-11-05T16:43:35.060136+00:00",
+    "step": "script_unique_data_generated",
+    "details": {
+      "script_id": "6aecb22ca2ae3588b32c6054",
+      "scenes": 4
+    }
+  },
+  {
+    "timestamp": "2026-11-05T16:43:56.601073+00:00",
+    "step": "script_product_value_generated",
+    "details": {
+      "script_id": "6aecb237a2ae3588b32c605e",
+      "scenes": 4
+    }
+  },
+  {
+    "timestamp": "2026-11-05T16:43:57.000029+00:00",
+    "step": "script_approved",
+    "details": {
+      "script_id": "6aecb20fa2ae3588b32c6048",
+      "approved_at": "2026-11-05 16:43:56.772000"
+    }
+  },
+  {
+    "timestamp": "2026-11-05T16:45:09.195470+00:00",
+    "step": "video_30s_rendered",
+    "details": {
+      "job_id": "6aecb295a2ae3588b32c6071",
+      "duration": 30.0,
+      "file_path": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\media\\videos\\e2e_smoke_30s_261105_164115.mp4"
+    }
+  },
+  {
+    "timestamp": "2026-11-05T16:46:51.256161+00:00",
+    "step": "video_45s_rendered",
+    "details": {
+      "job_id": "6aecb2fba2ae3588b32c6072",
+      "duration": 45.0,
+      "file_path": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\media\\videos\\e2e_smoke_45s_261105_164115.mp4"
+    }
+  },
+  {
+    "timestamp": "2026-11-05T16:49:05.775286+00:00",
+    "step": "video_60s_rendered",
+    "details": {
+      "job_id": "6aecb381a2ae3588b32c6073",
+      "duration": 60.0,
+      "file_path": "C:\\Users\\dashw\\OneDrive\\Desktop\\my projects\\CrowdWisdom AI Studio\\backend\\media\\videos\\e2e_smoke_60s_261105_164115.mp4"
+    }
+  }
+]
