@@ -2,6 +2,27 @@ import { WSEvent } from '@/types'
 
 type EventHandler = (event: WSEvent) => void
 
+function getWebSocketBaseUrl(): string {
+  const envWsUrl = import.meta.env.VITE_WS_URL
+  if (envWsUrl && typeof envWsUrl === 'string' && envWsUrl.trim()) {
+    return envWsUrl.trim().replace(/\/+$/, '')
+  }
+
+  const envApiUrl = import.meta.env.VITE_API_BASE_URL
+  if (envApiUrl && typeof envApiUrl === 'string' && (envApiUrl.startsWith('http://') || envApiUrl.startsWith('https://'))) {
+    const wsProto = envApiUrl.startsWith('https://') ? 'wss://' : 'ws://'
+    try {
+      const urlObj = new URL(envApiUrl)
+      return `${wsProto}${urlObj.host}`
+    } catch {
+      // Fall through to window.location
+    }
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}`
+}
+
 class WebSocketManager {
   private ws: WebSocket | null = null
   private clientId: string
@@ -25,9 +46,9 @@ class WebSocketManager {
     if (this.tokenRejected) return
     this.isConnecting = true
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const baseUrl = getWebSocketBaseUrl()
     const tokenParam = token ? `?token=${encodeURIComponent(token)}` : ''
-    const url = `${protocol}//${window.location.host}/ws/${this.clientId}${tokenParam}`
+    const url = `${baseUrl}/ws/${this.clientId}${tokenParam}`
 
     try {
       this.ws = new WebSocket(url)

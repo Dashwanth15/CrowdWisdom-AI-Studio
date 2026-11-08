@@ -169,9 +169,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app.get("/api/health")
+@app.get("/health", tags=["Health"])
+@app.get("/api/health", tags=["Health"])
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint for Render service probes and uptime monitors."""
     from database.connection import get_database
     try:
         db = get_database()

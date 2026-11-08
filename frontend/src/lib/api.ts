@@ -1,7 +1,9 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
 
+export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
+
 const apiClient: AxiosInstance = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -80,7 +82,7 @@ export const scriptsApi = {
   update: (id: string, data: any) => apiClient.patch(`/scripts/${id}`, data),
   delete: (id: string) => apiClient.delete(`/scripts/${id}`),
   clearFailed: () => apiClient.delete('/scripts/clear-failed'),
-  getExportUrl: (id: string) => `/api/scripts/${id}/export`,
+  getExportUrl: (id: string) => `${apiBaseUrl}/scripts/${id}/export`,
 }
 
 // Videos
@@ -103,7 +105,7 @@ export const researchApi = {
   associateCampaign: (data: { campaign_id: string; ad_ids: string[] }) =>
     apiClient.post('/research/associate-campaign', data),
   getExportUrl: (campaign_id?: string) =>
-    campaign_id ? `/api/research/advertisements/export?campaign_id=${campaign_id}` : '/api/research/advertisements/export',
+    campaign_id ? `${apiBaseUrl}/research/advertisements/export?campaign_id=${campaign_id}` : `${apiBaseUrl}/research/advertisements/export`,
 }
 
 // Creative Briefs (Checkpoint 1)

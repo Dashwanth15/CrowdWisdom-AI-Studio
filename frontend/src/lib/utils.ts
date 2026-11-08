@@ -110,22 +110,40 @@ export function getStatusColor(status: string): string {
   )
 }
 
+function getMediaHostPrefix(): string {
+  const envApiUrl = import.meta.env.VITE_API_BASE_URL
+  if (envApiUrl && typeof envApiUrl === 'string' && (envApiUrl.startsWith('http://') || envApiUrl.startsWith('https://'))) {
+    try {
+      const urlObj = new URL(envApiUrl)
+      return `${urlObj.protocol}//${urlObj.host}`
+    } catch {
+      // Fall through
+    }
+  }
+  return ''
+}
+
 export function resolveMediaUrl(url: string | undefined | null): string {
   if (!url) return ''
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url
 
   // Standardize backslashes from Windows paths and trim whitespace
   const cleanUrl = url.replace(/\\/g, '/').trim()
+  const prefix = getMediaHostPrefix()
 
+  let path = ''
   // Handle bare filenames or any string referencing asset_
   if (cleanUrl.includes('asset_')) {
     const filename = cleanUrl.split('/').pop()
-    return `/media/assets/${filename}`
-  }
-  if (cleanUrl.endsWith('.mp4')) {
+    path = `/media/assets/${filename}`
+  } else if (cleanUrl.endsWith('.mp4')) {
     const filename = cleanUrl.split('/').pop()
-    return `/media/videos/${filename}`
+    path = `/media/videos/${filename}`
+  } else if (cleanUrl.startsWith('media/')) {
+    path = `/${cleanUrl}`
+  } else {
+    path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`
   }
-  if (cleanUrl.startsWith('media/')) return `/${cleanUrl}`
-  return cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`
+
+  return prefix ? `${prefix}${path}` : path
 }

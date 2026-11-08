@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     APP_SECRET_KEY: str = "replace_with_app_secret"
     APP_HOST: str = "0.0.0.0"
-    APP_PORT: int = 8000
+    APP_PORT: int = Field(default=8000, validation_alias=AliasChoices("APP_PORT", "PORT"))
     FRONTEND_URL: str = "http://localhost:5173"
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000"
 
@@ -82,7 +82,12 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        if self.FRONTEND_URL:
+            clean_fe = self.FRONTEND_URL.strip().rstrip("/")
+            if clean_fe and clean_fe not in origins:
+                origins.append(clean_fe)
+        return origins
 
     @property
     def is_production(self) -> bool:
