@@ -26,7 +26,7 @@ except Exception:
     pass
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -87,11 +87,42 @@ app = FastAPI(
     title="CrowdWisdom AI Studio API",
     description="Autonomous AI Marketing Agent & Cinematic Video Advertising Platform",
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
     lifespan=lifespan,
 )
+
+# --- Root & Documentation Compatibility Redirects ---
+@app.get("/", include_in_schema=False)
+async def root():
+    """Root platform discovery endpoint."""
+    return {
+        "service": "CrowdWisdom AI Studio API",
+        "status": "online",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "openapi": "/openapi.json",
+        "health": "/health",
+    }
+
+
+@app.get("/api/docs", include_in_schema=False)
+async def redirect_api_docs():
+    """Redirect /api/docs to /docs for seamless developer navigation."""
+    return RedirectResponse(url="/docs")
+
+
+@app.get("/api/redoc", include_in_schema=False)
+async def redirect_api_redoc():
+    """Redirect /api/redoc to /redoc."""
+    return RedirectResponse(url="/redoc")
+
+
+@app.get("/api/openapi.json", include_in_schema=False)
+async def redirect_api_openapi():
+    """Redirect /api/openapi.json to /openapi.json."""
+    return RedirectResponse(url="/openapi.json")
 
 # --- Middleware ---
 app.add_middleware(
