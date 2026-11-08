@@ -66,9 +66,16 @@ stage*_frames/
 *.webm
 *TEMP*
 
+# Root Media Directory (Canonical storage is backend/media/)
+media/
+
+# Dynamic Render Outputs (Keep repository clean and under Git limits)
+backend/media/videos/video_*.mp4
+backend/media/thumbnails/thumb_*.jpg
+backend/media/assets/asset_*.jpg
+
 # Temporary Rendering Outputs & Intermediate Caches
 backend/media/assets/stock_footage/prescaled_*
-media/assets/stock_footage/prescaled_*
 backend/media/test_renders/
 backend/media/stage1_frames/
 backend/media/stage2_frames/
@@ -91,6 +98,10 @@ logs/
 !backend/media/assets/stock_footage/
 !backend/media/assets/stock_footage/*.mp4
 !backend/media/assets/crowdwisdom_logo_*.png
+!backend/media/videos/*_verified_*.mp4
+!backend/media/videos/commercial_30s_verified.mp4
+!backend/media/videos/openmontage_verified_ad.mp4
+!backend/media/videos/regression_verified_commercial.mp4
 !frontend/public/crowdwisdom_logo_*.png
 !frontend/public/favicon*
 !frontend/public/apple-touch-icon.png
