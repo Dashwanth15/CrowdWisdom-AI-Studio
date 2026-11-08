@@ -88,7 +88,9 @@ storage/temp_*
 # Runtime Logs
 *.log
 backend/logs/
-logs/
+/logs/
+!frontend/src/pages/logs/
+!frontend/src/pages/logs/**
 
 # ==============================================================================
 # EXPLICITLY PRESERVED PRODUCTION ASSETS (DO NOT IGNORE)

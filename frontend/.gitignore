@@ -1,6 +1,8 @@
 # Logs
-logs
+/logs/
 *.log
+!src/pages/logs/
+!src/pages/logs/**
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
