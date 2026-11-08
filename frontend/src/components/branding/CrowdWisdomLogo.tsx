@@ -28,10 +28,9 @@ export const CrowdWisdomLogo: React.FC<CrowdWisdomLogoProps> = ({
   asLink = false,
   href = '/',
 }) => {
-  // Asset paths from public directory
-  const badgeSrc = badgeTheme === 'dark' ? '/crowdwisdom_logo_dark.png' : '/crowdwisdom_logo_badge.png'
+  // Asset paths from public directory (canonical official branding)
+  const badgeSrc = '/crowdwisdom_logo_badge.png'
   const symbolSrc = '/crowdwisdom_logo_symbol.png'
-  const fullSrc = '/crowdwisdom_logo_full.png'
 
   // Size mapping for symbol-only and badge-only variants
   const symbolSizeClasses = {
@@ -93,7 +92,7 @@ export const CrowdWisdomLogo: React.FC<CrowdWisdomLogoProps> = ({
   if (variant === 'full') {
     const content = (
       <img
-        src={fullSrc}
+        src={badgeSrc}
         alt="CrowdWisdom Official Brand Identity"
         className={cn('h-auto max-w-full object-contain select-none', imageClassName)}
         loading="eager"

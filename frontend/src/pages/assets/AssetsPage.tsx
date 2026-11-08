@@ -91,12 +91,6 @@ export const AssetsPage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <a href="/crowdwisdom_logo_full.png" download="crowdwisdom_official_logo.png">
-              <Button variant="outline" size="sm" className="h-8 text-xs border-[#292E37] text-[#A0A7B2] hover:text-[#F2F3F5]">
-                <Download className="h-3.5 w-3.5 mr-1.5" />
-                Full Brand Logo
-              </Button>
-            </a>
             <a href="/crowdwisdom_logo_symbol.png" download="crowdwisdom_symbol.png">
               <Button variant="outline" size="sm" className="h-8 text-xs border-[#292E37] text-[#A0A7B2] hover:text-[#F2F3F5]">
                 <Download className="h-3.5 w-3.5 mr-1.5" />
