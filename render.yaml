@@ -58,7 +58,7 @@ services:
     plan: free
     branch: main
     rootDir: frontend
-    buildCommand: pnpm install && pnpm build
+    buildCommand: pnpm build
     staticPublishPath: dist
     autoDeploy: true
     routes:
@@ -66,6 +66,8 @@ services:
         source: /*
         destination: /index.html
     envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
       - key: VITE_API_BASE_URL
         sync: false
       - key: VITE_WS_URL
