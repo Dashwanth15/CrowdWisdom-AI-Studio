@@ -16,6 +16,7 @@ if sys.platform == "win32":
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database.connection import connect_to_mongo, close_mongo_connection, get_database
+from config import settings
 from services.auth_service import hash_password
 from services.integration_service import upsert_integration, get_decrypted_api_key
 from integrations.llm_client import LLMClient
@@ -23,25 +24,30 @@ from integrations.apify_client import ApifyClient
 from integrations.tavily_client import TavilyClient
 from integrations.exa_client import ExaClient
 
+# Secure credential mapping loaded dynamically from environment
 CREDENTIALS = {
+    "gemini": {
+        "key": settings.GEMINI_API_KEY,
+        "model": "gemini-2.5-flash",
+    },
     "openrouter": {
-        "key": "your_openrouter_api_key",
+        "key": settings.OPENROUTER_API_KEY,
         "model": "meta-llama/llama-3.1-70b-instruct",
     },
     "nvidia_nim": {
-        "key": "your_nvidia_api_key",
+        "key": settings.NVIDIA_NIM_API_KEY,
         "model": "nvidia/nemotron-3.5-bolt-e4b",
     },
     "apify": {
-        "key": "your_apify_token",
+        "key": settings.APIFY_API_TOKEN,
         "model": None,
     },
     "tavily": {
-        "key": "your_tavily_api_key",
+        "key": settings.TAVILY_API_KEY,
         "model": None,
     },
     "exa": {
-        "key": "your_exa_api_key",
+        "key": settings.EXA_API_KEY,
         "model": None,
     },
 }
@@ -84,76 +90,109 @@ async def main():
     # 3. Store and Encrypt Integration Credentials
     print("\n3. Encrypting and Storing Integration Credentials...")
     for provider, data in CREDENTIALS.items():
+        if not data.get("key"):
+            print(f"  [SKIP] {provider}: No API key provided in environment.")
+            continue
         doc = await upsert_integration(
             provider_name=provider,
             api_key=data["key"],
             model_name=data["model"],
             is_active=True,
         )
-        print(f"[OK] Stored {provider}: {doc.get('api_key_masked')}")
+        print(f"  [OK] Stored {provider}: {doc.get('api_key_masked')}")
 
     # 4. Live Connection Tests
     print("\n4. Running Live Provider Connection Tests...")
 
-    # A. OpenRouter Test
-    print("-> Testing OpenRouter connection...")
-    try:
-        openrouter = LLMClient(api_key=CREDENTIALS["openrouter"]["key"], provider="openrouter", model=CREDENTIALS["openrouter"]["model"])
-        res = await openrouter.test_connection()
-        if res.get("success"):
-            print(f"  [OK] OpenRouter Verified! Model: {res.get('model')} | Response: {res.get('response')[:60]}")
-        else:
-            print(f"  [FAIL] OpenRouter Warning: {res.get('error')}")
-    except Exception as e:
-        print(f"  [FAIL] OpenRouter Error: {e}")
+    # Gemini Test
+    if CREDENTIALS["gemini"]["key"]:
+        print("-> Testing Google Gemini connection...")
+        try:
+            gemini = LLMClient(api_key=CREDENTIALS["gemini"]["key"], provider="gemini", model=CREDENTIALS["gemini"]["model"])
+            res = await gemini.test_connection()
+            if res.get("success"):
+                print(f"  [OK] Gemini Verified! Model: {res.get('model')} | Response: {res.get('response')[:60]}")
+            else:
+                print(f"  [FAIL] Gemini Warning: {res.get('error')}")
+        except Exception as e:
+            print(f"  [FAIL] Gemini Error: {e}")
+    else:
+        print("  [SKIP] Gemini: key not configured.")
 
-    # B. NVIDIA NIM Test
-    print("-> Testing NVIDIA NIM connection...")
-    try:
-        nim = LLMClient(api_key=CREDENTIALS["nvidia_nim"]["key"], provider="nvidia_nim", model=CREDENTIALS["nvidia_nim"]["model"])
-        res = await nim.test_connection()
-        if res.get("success"):
-            print(f"  [OK] NVIDIA NIM Verified! Model: {res.get('model')} | Response: {res.get('response')[:60]}")
-        else:
-            print(f"  [FAIL] NVIDIA NIM Warning: {res.get('error')}")
-    except Exception as e:
-        print(f"  [FAIL] NVIDIA NIM Error: {e}")
+    # OpenRouter Test
+    if CREDENTIALS["openrouter"]["key"]:
+        print("-> Testing OpenRouter connection...")
+        try:
+            openrouter = LLMClient(api_key=CREDENTIALS["openrouter"]["key"], provider="openrouter", model=CREDENTIALS["openrouter"]["model"])
+            res = await openrouter.test_connection()
+            if res.get("success"):
+                print(f"  [OK] OpenRouter Verified! Model: {res.get('model')} | Response: {res.get('response')[:60]}")
+            else:
+                print(f"  [FAIL] OpenRouter Warning: {res.get('error')}")
+        except Exception as e:
+            print(f"  [FAIL] OpenRouter Error: {e}")
+    else:
+        print("  [SKIP] OpenRouter: key not configured.")
 
-    # C. Apify Test
-    print("-> Testing Apify connection...")
-    try:
-        apify = ApifyClient(api_token=CREDENTIALS["apify"]["key"])
-        res = await apify.test_connection()
-        if res.get("success"):
-            print(f"  [OK] Apify Verified! User: {res.get('username')} | Plan: {res.get('plan')}")
-        else:
-            print(f"  [FAIL] Apify Warning: {res.get('error')}")
-    except Exception as e:
-        print(f"  [FAIL] Apify Error: {e}")
+    # NVIDIA NIM Test
+    if CREDENTIALS["nvidia_nim"]["key"]:
+        print("-> Testing NVIDIA NIM connection...")
+        try:
+            nim = LLMClient(api_key=CREDENTIALS["nvidia_nim"]["key"], provider="nvidia_nim", model=CREDENTIALS["nvidia_nim"]["model"])
+            res = await nim.test_connection()
+            if res.get("success"):
+                print(f"  [OK] NVIDIA NIM Verified! Model: {res.get('model')} | Response: {res.get('response')[:60]}")
+            else:
+                print(f"  [FAIL] NVIDIA NIM Warning: {res.get('error')}")
+        except Exception as e:
+            print(f"  [FAIL] NVIDIA NIM Error: {e}")
+    else:
+        print("  [SKIP] NVIDIA NIM: key not configured.")
 
-    # D. Tavily Test
-    print("-> Testing Tavily connection...")
-    try:
-        tavily = TavilyClient(api_key=CREDENTIALS["tavily"]["key"])
-        res = await tavily.test_connection()
-        if res.get("success"):
-            print(f"  [OK] Tavily Verified! Results Found: {res.get('results_count')}")
-        else:
-            print(f"  [FAIL] Tavily Warning: {res.get('error')}")
-    except Exception as e:
-        print(f"  [FAIL] Tavily Error: {e}")
+    # Apify Test
+    if CREDENTIALS["apify"]["key"]:
+        print("-> Testing Apify connection...")
+        try:
+            apify = ApifyClient(api_token=CREDENTIALS["apify"]["key"])
+            res = await apify.test_connection()
+            if res.get("success"):
+                print(f"  [OK] Apify Verified! User: {res.get('username')} | Plan: {res.get('plan')}")
+            else:
+                print(f"  [FAIL] Apify Warning: {res.get('error')}")
+        except Exception as e:
+            print(f"  [FAIL] Apify Error: {e}")
+    else:
+        print("  [SKIP] Apify: token not configured.")
 
-    # E. Exa Test
-    print("-> Testing Exa connection...")
-    try:
-        exa = ExaClient(api_key=CREDENTIALS["exa"]["key"])
-        res = await exa.test_connection()
-        if res.get("success"):
-            print(f"  [OK] Exa Verified! Results Found: {res.get('results_count')}")
-        else:
-            print(f"  [FAIL] Exa Warning: {res.get('error')}")
-    except Exception as e:
-        print(f"  [FAIL] Exa Error: {e}")
+    # Tavily Test
+    if CREDENTIALS["tavily"]["key"]:
+        print("-> Testing Tavily connection...")
+        try:
+            tavily = TavilyClient(api_key=CREDENTIALS["tavily"]["key"])
+            res = await tavily.test_connection()
+            if res.get("success"):
+                print(f"  [OK] Tavily Verified! Results Found: {res.get('results_count')}")
+            else:
+                print(f"  [FAIL] Tavily Warning: {res.get('error')}")
+        except Exception as e:
+            print(f"  [FAIL] Tavily Error: {e}")
+    else:
+        print("  [SKIP] Tavily: key not configured.")
+
+    # Exa Test
+    if CREDENTIALS["exa"]["key"]:
+        print("-> Testing Exa connection...")
+        try:
+            exa = ExaClient(api_key=CREDENTIALS["exa"]["key"])
+            res = await exa.test_connection()
+            if res.get("success"):
+                print(f"  [OK] Exa Verified! Results Found: {res.get('results_count')}")
+            else:
+                print(f"  [FAIL] Exa Warning: {res.get('error')}")
+        except Exception as e:
+            print(f"  [FAIL] Exa Error: {e}")
+    else:
+        print("  [SKIP] Exa: key not configured.")
 
     await close_mongo_connection()
     print("\n" + "=" * 60)

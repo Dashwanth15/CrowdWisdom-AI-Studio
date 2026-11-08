@@ -31,7 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from config import settings
+from config import settings, mask_connection_url
 from database.connection import connect_to_mongo, close_mongo_connection
 from services.integration_service import initialize_default_integrations
 from workers.job_manager import job_manager
@@ -48,6 +48,18 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application startup and shutdown lifecycle."""
     logger.info("Starting CrowdWisdom AI Studio backend...")
+
+    # 0. Validate Environment Configuration
+    env_status = settings.validate_environment()
+    if not env_status["valid"]:
+        for issue in env_status["issues"]:
+            logger.error(f"[SECURITY_CONFIG_ERROR] {issue}")
+        if settings.is_production:
+            raise RuntimeError(f"Startup aborted due to critical security issues: {env_status['issues']}")
+    for warning in env_status.get("warnings", []):
+        logger.warning(f"[CONFIG_WARNING] {warning}")
+
+    logger.info(f"Loaded configuration for environment '{settings.APP_ENV}'")
 
     # 1. Connect to MongoDB
     await connect_to_mongo()
@@ -128,13 +140,32 @@ async def serve_direct_asset_route(filename: str):
     return await serve_asset(filename)
 
 
+def _sanitize_error_message(exc: Exception) -> str:
+    """Scrub potential credentials and sensitive database URIs from exception messages."""
+    import re
+    msg = mask_connection_url(str(exc))
+    msg = re.sub(r"(AIzaSy[A-Za-z0-9_-]{8,})", r"AIzaSy****[REDACTED]", msg)
+    msg = re.sub(r"(sk-[A-Za-z0-9_-]{8,})", r"sk-****[REDACTED]", msg)
+    msg = re.sub(r"(nvapi-[A-Za-z0-9_-]{8,})", r"nvapi-****[REDACTED]", msg)
+    msg = re.sub(r"(tvly-[A-Za-z0-9_-]{8,})", r"tvly-****[REDACTED]", msg)
+    msg = re.sub(r"(apify_api_[A-Za-z0-9_-]{8,})", r"apify_api_****[REDACTED]", msg)
+    return msg
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Global catch-all exception handler to log tracebacks and prevent silent 500s."""
-    logger.error(f"[UnhandledException] {request.method} {request.url.path}: {exc}", exc_info=True)
+    """Global catch-all exception handler to log tracebacks and prevent secret leakage."""
+    sanitized_msg = _sanitize_error_message(exc)
+    logger.error(f"[UnhandledException] {request.method} {request.url.path}: {sanitized_msg}", exc_info=True)
+
+    if settings.is_production:
+        client_detail = "Internal server error. Incident logged."
+    else:
+        client_detail = f"Internal server error: {sanitized_msg}"
+
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Internal server error: {str(exc)}"}
+        content={"detail": client_detail}
     )
 
 

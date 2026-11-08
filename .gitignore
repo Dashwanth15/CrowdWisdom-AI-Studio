@@ -1,0 +1,97 @@
+# ==============================================================================
+# CROWDWISDOM AI STUDIO — PRODUCTION GITIGNORE
+# ==============================================================================
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing & Type Checking Caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.cover
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Node & Frontend Dependencies and Builds
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and Secrets (Keep .env.example tracked)
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+*.pem
+*.key
+*.pfx
+*.cert
+
+# IDE and Operating System
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Storage Quarantine & Temporary Test Scratch
+.storage_quarantine/
+scratch/
+test_renders/
+stage*_frames/
+*.webm
+*TEMP*
+
+# Temporary Rendering Outputs & Intermediate Caches
+backend/media/assets/stock_footage/prescaled_*
+media/assets/stock_footage/prescaled_*
+backend/media/test_renders/
+backend/media/stage1_frames/
+backend/media/stage2_frames/
+backend/media/stage4_frames/
+backend/media/verification_frames/
+backend/media/_cache/
+backend/storage/temp_*
+storage/temp_*
+
+# Runtime Logs
+*.log
+backend/logs/
+logs/
+
+# ==============================================================================
+# EXPLICITLY PRESERVED PRODUCTION ASSETS (DO NOT IGNORE)
+# ==============================================================================
+!backend/media/assets/fallback_library/
+!backend/media/assets/fallback_library/*
+!backend/media/assets/stock_footage/
+!backend/media/assets/stock_footage/*.mp4
+!backend/media/assets/crowdwisdom_logo_*.png
+!frontend/public/crowdwisdom_logo_*.png
+!frontend/public/favicon*
+!frontend/public/apple-touch-icon.png
+

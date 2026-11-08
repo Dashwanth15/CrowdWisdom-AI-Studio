@@ -96,6 +96,93 @@ class LocalStorageService(BaseStorageService):
         clean_path = file_path_relative.replace("\\", "/").lstrip("/")
         return f"/api/media/{clean_path}"
 
+    async def prune_prescaled_cache(self, max_age_hours: int = 12, dry_run: bool = False) -> dict:
+        """
+        Safely prunes intermediate FFmpeg fast-prescaling MP4 files older than max_age_hours.
+        These are reconstructed automatically on demand during video rendering.
+        """
+        import time
+        reclaimed_bytes = 0
+        pruned_files = []
+        now = time.time()
+        cutoff = now - (max_age_hours * 3600)
+
+        stock_dir = self.base_dir / "assets" / "stock_footage"
+        if stock_dir.exists():
+            for p in stock_dir.glob("prescaled_*.mp4"):
+                try:
+                    st = p.stat()
+                    if st.st_mtime <= cutoff or max_age_hours == 0:
+                        reclaimed_bytes += st.st_size
+                        pruned_files.append(str(p.name))
+                        if not dry_run:
+                            p.unlink()
+                            logger.info(f"[StorageLifecycle] Pruned prescaled cache: {p.name}")
+                except Exception as e:
+                    logger.warning(f"[StorageLifecycle] Error checking {p.name}: {e}")
+
+        return {
+            "pruned_count": len(pruned_files),
+            "reclaimed_bytes": reclaimed_bytes,
+            "reclaimed_mb": round(reclaimed_bytes / (1024 * 1024), 2),
+            "dry_run": dry_run,
+            "files": pruned_files,
+        }
+
+    async def prune_test_renders(self, max_age_hours: int = 24, dry_run: bool = False) -> dict:
+        """
+        Safely prunes ad-hoc developer test renders from backend/media/test_renders.
+        Never affects production video jobs in backend/media/videos/.
+        """
+        import time
+        reclaimed_bytes = 0
+        pruned_files = []
+        now = time.time()
+        cutoff = now - (max_age_hours * 3600)
+
+        test_dir = self.base_dir / "test_renders"
+        if test_dir.exists():
+            for p in test_dir.iterdir():
+                if p.is_file():
+                    try:
+                        st = p.stat()
+                        if st.st_mtime <= cutoff or max_age_hours == 0:
+                            reclaimed_bytes += st.st_size
+                            pruned_files.append(str(p.name))
+                            if not dry_run:
+                                p.unlink()
+                                logger.info(f"[StorageLifecycle] Pruned test render: {p.name}")
+                    except Exception as e:
+                        logger.warning(f"[StorageLifecycle] Error pruning test render {p.name}: {e}")
+
+        return {
+            "pruned_count": len(pruned_files),
+            "reclaimed_bytes": reclaimed_bytes,
+            "reclaimed_mb": round(reclaimed_bytes / (1024 * 1024), 2),
+            "dry_run": dry_run,
+            "files": pruned_files,
+        }
+
+    def get_storage_breakdown(self) -> dict:
+        """Calculates storage consumption across subdirectories."""
+        breakdown = {}
+        total = 0
+        if self.base_dir.exists():
+            for d in self.base_dir.iterdir():
+                if d.is_dir():
+                    sz = sum(f.stat().st_size for f in d.rglob("*") if f.is_file())
+                    cnt = sum(1 for f in d.rglob("*") if f.is_file())
+                    breakdown[d.name] = {
+                        "size_mb": round(sz / (1024 * 1024), 2),
+                        "file_count": cnt,
+                    }
+                    total += sz
+        return {
+            "base_dir": str(self.base_dir),
+            "total_size_mb": round(total / (1024 * 1024), 2),
+            "subdirectories": breakdown,
+        }
+
 
 class S3StorageService(BaseStorageService):
     """

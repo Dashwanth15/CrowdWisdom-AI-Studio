@@ -5,7 +5,7 @@ Uses motor (async MongoDB driver) with beanie ODM.
 import logging
 from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from config import settings
+from config import settings, mask_connection_url
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ _db: Optional[AsyncIOMotorDatabase] = None
 async def connect_to_mongo() -> None:
     """Initialize MongoDB connection on application startup."""
     global _client, _db
+    masked_url = mask_connection_url(settings.MONGODB_URL)
     try:
         _client = AsyncIOMotorClient(
             settings.MONGODB_URL,
@@ -25,11 +26,12 @@ async def connect_to_mongo() -> None:
         _db = _client[settings.MONGODB_DB_NAME]
         # Verify connection
         await _client.admin.command("ping")
-        logger.info(f"Connected to MongoDB: {settings.MONGODB_DB_NAME}")
+        logger.info(f"Connected to MongoDB ({settings.MONGODB_DB_NAME}) at {masked_url}")
         await _ensure_indexes()
     except Exception as e:
-        logger.error(f"Failed to connect to MongoDB: {e}")
-        raise
+        sanitized_error = mask_connection_url(str(e))
+        logger.error(f"Failed to connect to MongoDB ({masked_url}): {sanitized_error}")
+        raise RuntimeError(f"MongoDB connection failed ({masked_url}): {sanitized_error}") from None
 
 
 async def close_mongo_connection() -> None:
@@ -44,6 +46,7 @@ def get_database() -> AsyncIOMotorDatabase:
     """Return the active database instance, lazily connecting if necessary."""
     global _client, _db
     if _db is None:
+        masked_url = mask_connection_url(settings.MONGODB_URL)
         try:
             _client = AsyncIOMotorClient(
                 settings.MONGODB_URL,
@@ -52,8 +55,9 @@ def get_database() -> AsyncIOMotorDatabase:
             )
             _db = _client[settings.MONGODB_DB_NAME]
         except Exception as e:
-            logger.error(f"Lazy connection to MongoDB failed: {e}")
-            raise RuntimeError(f"Database not initialized: {e}") from e
+            sanitized = mask_connection_url(str(e))
+            logger.error(f"Lazy connection to MongoDB failed ({masked_url}): {sanitized}")
+            raise RuntimeError(f"Database not initialized ({masked_url}): {sanitized}") from None
     return _db
 
 
