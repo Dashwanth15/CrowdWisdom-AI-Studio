@@ -70,3 +70,4 @@ services:
         sync: false
       - key: VITE_WS_URL
         sync: false
+
