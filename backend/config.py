@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     MEDIA_DIR: str = str((Path(__file__).parent / "media").resolve())
     MAX_VIDEO_SIZE_MB: int = 500
 
+    @field_validator("APP_SECRET_KEY", "JWT_SECRET_KEY", "MONGODB_URL", mode="before")
+    @classmethod
+    def strip_whitespace_and_quotes(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.strip().strip("'\"")
+        return v
+
     @property
     def cors_origins_list(self) -> List[str]:
         origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
@@ -137,7 +144,7 @@ class Settings(BaseSettings):
         if self.is_production:
             if "production-secret" in self.APP_SECRET_KEY or len(self.APP_SECRET_KEY) < 32:
                 issues.append("APP_SECRET_KEY must be a secure random string of at least 32 characters in production.")
-            if "jwt-production-secret" in self.JWT_SECRET_KEY or len(self.JWT_SECRET_KEY) < 32:
+            if "production-secret" in self.JWT_SECRET_KEY or "jwt-production-secret" in self.JWT_SECRET_KEY or len(self.JWT_SECRET_KEY) < 32:
                 issues.append("JWT_SECRET_KEY must be a secure random string of at least 32 characters in production.")
 
         # 2. Database validation
