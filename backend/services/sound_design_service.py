@@ -73,8 +73,12 @@ class SoundDesignService:
         bass_freqs = np.array([chords[c][0] * 0.5 for c in chord_idx], dtype=np.float32) # Sub octave
         bass_pulse = 0.22 * bass_env * np.sin(2 * np.pi * bass_freqs * t)
 
-        stem_harmony_left = pad_left + bass_pulse
-        stem_harmony_right = pad_right + bass_pulse
+        # -------------------------------------------------------------
+        # Master Mix Buffers (initialized directly with Stem 1: Harmony)
+        # -------------------------------------------------------------
+        raw_left = (pad_left + bass_pulse) * 0.40
+        raw_right = (pad_right + bass_pulse) * 0.40
+        del pad_left, pad_right, bass_pulse
 
         # -------------------------------------------------------------
         # Stem 2: Hybrid Cinematic Percussion (120 BPM)
@@ -87,6 +91,7 @@ class SoundDesignService:
         kick_env = np.where(is_kick & (beat_t < 0.24), np.exp(-beat_t * 22.0), 0.0)
         kick_freq = 52.0 + 75.0 * np.exp(-beat_t * 36.0)
         kick_mono = 0.38 * kick_env * np.sin(2 * np.pi * kick_freq * beat_t)
+        del kick_env, kick_freq
 
         # Snappy commercial rimshot/snare on beats 1 and 3
         is_snare = (beat_num == 1) | (beat_num == 3)
@@ -94,21 +99,22 @@ class SoundDesignService:
         np.random.seed(42)
         snare_noise = np.random.uniform(-1.0, 1.0, n_samples).astype(np.float32)
         snare_mono = 0.16 * snare_env * (snare_noise + 0.6 * np.sin(2 * np.pi * 320.0 * beat_t))
+        del snare_env, snare_noise
 
         # Hi-hat on 8th and 16th notes
         sub_beat_t = t % (beat_dur / 2.0)
         hat_env = np.where(sub_beat_t < 0.035, np.exp(-sub_beat_t * 90.0), 0.0)
         hat_mono = 0.06 * hat_env * (np.sin(2 * np.pi * 7800.0 * t) + np.sin(2 * np.pi * 9600.0 * t))
+        del hat_env
 
-        stem_perc_left = kick_mono + snare_mono * 0.9 + hat_mono * 1.1
-        stem_perc_right = kick_mono + snare_mono * 1.1 + hat_mono * 0.9
+        # Accumulate percussion in-place
+        raw_left += (kick_mono + snare_mono * 0.9 + hat_mono * 1.1) * 0.70
+        raw_right += (kick_mono + snare_mono * 1.1 + hat_mono * 0.9) * 0.70
+        del kick_mono, snare_mono, hat_mono
 
         # -------------------------------------------------------------
         # Stem 3: Opening Hook Braam & Sub-Bass Drop (t in [0.0, 1.8s])
         # -------------------------------------------------------------
-        braam_left = np.zeros(n_samples, dtype=np.float32)
-        braam_right = np.zeros(n_samples, dtype=np.float32)
-
         braam_mask = t <= 1.8
         if np.any(braam_mask):
             b_t = t[braam_mask]
@@ -121,49 +127,40 @@ class SoundDesignService:
                 0.22 * np.sin(2 * np.pi * f_drop * 2.0 * b_t) +
                 0.14 * np.sin(2 * np.pi * (f_drop * 3.0 + 0.5) * b_t)
             )
-            braam_left[braam_mask] = 0.42 * b_env * braam_osc
-            braam_right[braam_mask] = 0.42 * b_env * braam_osc
+            raw_left[braam_mask] += 0.42 * b_env * braam_osc
+            raw_right[braam_mask] += 0.42 * b_env * braam_osc
+            del b_t, b_env, braam_osc
 
         # -------------------------------------------------------------
         # Stem 4: Directional Transition Whooshes, Risers & Impact Landings
         # -------------------------------------------------------------
-        trans_sfx_left = np.zeros(n_samples, dtype=np.float32)
-        trans_sfx_right = np.zeros(n_samples, dtype=np.float32)
-
         if transition_timestamps:
             for s_idx, t_trans in enumerate(transition_timestamps):
                 # 1. Reverse Riser / Sweep in [t_trans - 0.42s, t_trans]
-                dt_rise = t - (t_trans - 0.42)
                 rise_mask = (t >= (t_trans - 0.42)) & (t <= t_trans)
                 if np.any(rise_mask):
                     u_rise = (t[rise_mask] - (t_trans - 0.42)) / 0.42  # 0 to 1
                     rise_env = u_rise ** 2.2
-                    # Rising frequency sweep
                     sweep_freq = 220.0 + 780.0 * (u_rise ** 2.0)
                     rise_sound = 0.24 * rise_env * np.sin(2 * np.pi * sweep_freq * t[rise_mask])
-                    
-                    # Directional stereo pan: left-to-right sweep
                     pan_l = (1.0 - u_rise) * 1.2
                     pan_r = u_rise * 1.2
-                    trans_sfx_left[rise_mask] += rise_sound * pan_l
-                    trans_sfx_right[rise_mask] += rise_sound * pan_r
+                    raw_left[rise_mask] += rise_sound * pan_l
+                    raw_right[rise_mask] += rise_sound * pan_r
 
                 # 2. Sub-Bass Impact Landing in [t_trans, t_trans + 0.35s]
-                dt_imp = t - t_trans
                 imp_mask = (t >= t_trans) & (t <= (t_trans + 0.35))
                 if np.any(imp_mask):
-                    imp_env = np.exp(-dt_imp[imp_mask] * 18.0)
-                    imp_freq = 50.0 + 30.0 * np.exp(-dt_imp[imp_mask] * 24.0)
-                    impact_sound = 0.32 * imp_env * np.sin(2 * np.pi * imp_freq * dt_imp[imp_mask])
-                    trans_sfx_left[imp_mask] += impact_sound
-                    trans_sfx_right[imp_mask] += impact_sound
+                    dt_imp = t[imp_mask] - t_trans
+                    imp_env = np.exp(-dt_imp * 18.0)
+                    imp_freq = 50.0 + 30.0 * np.exp(-dt_imp * 24.0)
+                    impact_sound = 0.32 * imp_env * np.sin(2 * np.pi * imp_freq * dt_imp)
+                    raw_left[imp_mask] += impact_sound
+                    raw_right[imp_mask] += impact_sound
 
         # -------------------------------------------------------------
         # Stem 5: Telemetry UI Ticks & Closing Resolution Chime
         # -------------------------------------------------------------
-        ui_sfx_left = np.zeros(n_samples, dtype=np.float32)
-        ui_sfx_right = np.zeros(n_samples, dtype=np.float32)
-
         # Micro telemetry ticks every 1.5s (digital data chatter)
         tick_period = 1.5
         tick_t = t % tick_period
@@ -171,8 +168,9 @@ class SoundDesignService:
         if np.any(tick_mask):
             tick_env = np.exp(-tick_t[tick_mask] * 400.0)
             tick_osc = 0.035 * tick_env * np.sin(2 * np.pi * 5400.0 * t[tick_mask])
-            ui_sfx_left[tick_mask] += tick_osc
-            ui_sfx_right[tick_mask] += tick_osc
+            raw_left[tick_mask] += tick_osc
+            raw_right[tick_mask] += tick_osc
+            del tick_env, tick_osc
 
         # Closing Resolution Harmonic Chime at CTA reveal
         cta_t = cta_timestamp if cta_timestamp else max(0.0, total_duration - 3.2)
@@ -180,33 +178,15 @@ class SoundDesignService:
         if np.any(cta_mask):
             dt_cta = t[cta_mask] - cta_t
             chime_env = np.exp(-dt_cta * 0.9) # Long 3-second singing decay
-            # D-Major Resolution Triad: D4 (293.66Hz), F#4 (369.99Hz), A4 (440.00Hz), D5 (587.33Hz)
             chime_chord = (
                 0.14 * np.sin(2 * np.pi * 293.66 * dt_cta) +
                 0.12 * np.sin(2 * np.pi * 369.99 * dt_cta) +
                 0.10 * np.sin(2 * np.pi * 440.00 * dt_cta) +
                 0.08 * np.sin(2 * np.pi * 587.33 * dt_cta)
             )
-            ui_sfx_left[cta_mask] += chime_env * chime_chord
-            ui_sfx_right[cta_mask] += chime_env * chime_chord
-
-        # -------------------------------------------------------------
-        # Master Mix & Dynamic Sidechain Ducking
-        # -------------------------------------------------------------
-        raw_left = (
-            stem_harmony_left * 0.40 +
-            stem_perc_left * 0.70 +
-            braam_left +
-            trans_sfx_left +
-            ui_sfx_left
-        )
-        raw_right = (
-            stem_harmony_right * 0.40 +
-            stem_perc_right * 0.70 +
-            braam_right +
-            trans_sfx_right +
-            ui_sfx_right
-        )
+            raw_left[cta_mask] += chime_env * chime_chord
+            raw_right[cta_mask] += chime_env * chime_chord
+            del dt_cta, chime_env, chime_chord
 
         # Intro and Outro master envelopes
         intro_dur = 1.0
@@ -243,18 +223,67 @@ class SoundDesignService:
                 ramp_up = np.linspace(0.18, 0.52, idx_post - idx_end)
                 ducking_mult[idx_end:idx_post] = np.minimum(ducking_mult[idx_end:idx_post], ramp_up)
 
-        final_left = raw_left * master_env * ducking_mult
-        final_right = raw_right * master_env * ducking_mult
+        raw_left *= master_env
+        raw_left *= ducking_mult
+        raw_right *= master_env
+        raw_right *= ducking_mult
+        del master_env, ducking_mult
 
         # Peak normalization & soft limiting (-2.0 dBFS headroom)
-        max_peak = max(np.max(np.abs(final_left)), np.max(np.abs(final_right)), 0.001)
+        max_peak = max(np.max(np.abs(raw_left)), np.max(np.abs(raw_right)), 0.001)
         target_peak = 0.78  # -2.1 dBFS
         if max_peak > target_peak:
             scale = target_peak / max_peak
-            final_left *= scale
-            final_right *= scale
+            raw_left *= scale
+            raw_right *= scale
 
-        stereo = np.column_stack([final_left, final_right])
+        stereo = np.column_stack([raw_left, raw_right])
+        del raw_left, raw_right
         return stereo
+
+    def synthesize_soundtrack_to_wav(
+        self,
+        total_duration: float,
+        speech_intervals: List[Tuple[float, float]],
+        transition_timestamps: Optional[List[float]] = None,
+        cta_timestamp: Optional[float] = None,
+        bpm: float = 120.0,
+        output_wav_path: Optional[str] = None,
+    ) -> str:
+        """
+        Synthesizes the master stereo soundtrack directly to a 16-bit PCM WAV file on disk.
+        Aggressively deallocates transient float32 arrays and invokes garbage collection immediately,
+        preventing >100 MB transient memory spikes in Python memory during video rendering.
+        """
+        import gc
+        import wave
+        import tempfile
+
+        if not output_wav_path:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+                output_wav_path = tf.name
+
+        stereo = self.generate_commercial_soundtrack(
+            total_duration=total_duration,
+            speech_intervals=speech_intervals,
+            transition_timestamps=transition_timestamps,
+            cta_timestamp=cta_timestamp,
+            bpm=bpm,
+        )
+
+        # Convert float32 [-1.0, 1.0] to int16 PCM [-32768, 32767]
+        stereo_int16 = (np.clip(stereo, -1.0, 1.0) * 32767.0).astype(np.int16)
+        del stereo
+
+        with wave.open(output_wav_path, "wb") as wf:
+            wf.setnchannels(2)
+            wf.setsampwidth(2)  # 16-bit PCM
+            wf.setframerate(self.sample_rate)
+            wf.writeframes(stereo_int16.tobytes())
+
+        del stereo_int16
+        gc.collect()
+        logger.info(f"[SoundDesignService] Exported soundtrack WAV ({total_duration:.1f}s) to {output_wav_path}")
+        return output_wav_path
 
 sound_design_service = SoundDesignService()

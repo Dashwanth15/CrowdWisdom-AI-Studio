@@ -829,7 +829,8 @@ class OpenMontageAdapter:
         aspect_ratio: str = "9:16",
         target_duration: int = 45,
         quality: str = "high",
-        progress_callback: Optional[Any] = None
+        progress_callback: Optional[Any] = None,
+        cancel_event: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
         Renders a cinematic video advertisement from storyboard scenes.
@@ -923,7 +924,8 @@ class OpenMontageAdapter:
                 target_duration,
                 quality,
                 tts_result,
-                sync_progress
+                sync_progress,
+                cancel_event,
             )
 
         await _update_progress(98, "Finalizing MP4 container and commercial audio mix...")
@@ -940,6 +942,7 @@ class OpenMontageAdapter:
         quality: str,
         tts_result: Optional[Dict[str, Any]] = None,
         sync_progress: Optional[Callable[[int, str], None]] = None,
+        cancel_event: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
         Executes actual video rendering using MoviePy 2 and Pillow.
@@ -1165,8 +1168,18 @@ class OpenMontageAdapter:
             base_canvas.paste(card_img, (card_x, card_y), card_img)
             return base_canvas
 
-        oversized_w = int(width * 1.15)
-        oversized_h = int(height * 1.15)
+        oversized_w = int(width * 1.08)
+        oversized_h = int(height * 1.08)
+
+        # Precompute single shared bottom scrim strip (avoids per-scene repetitive line drawing and memory bloat)
+        scrim_start = int(height * 0.70)
+        scrim_height = height - scrim_start
+        shared_scrim_strip = Image.new("RGBA", (width, scrim_height), (0, 0, 0, 0))
+        scrim_draw = ImageDraw.Draw(shared_scrim_strip)
+        for y_rel in range(scrim_height):
+            progress_y = y_rel / max(1, scrim_height)
+            alpha_val = int(190 * (progress_y ** 1.3))
+            scrim_draw.line([(0, y_rel), (width, y_rel)], fill=(6, 10, 18, min(200, alpha_val)), width=1)
 
         # Pre-build scene overlays
         prepared_scenes = []
@@ -1179,14 +1192,8 @@ class OpenMontageAdapter:
             chart_theme = sc.get("chart_theme")
 
             overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            overlay.paste(shared_scrim_strip, (0, scrim_start))
             draw = ImageDraw.Draw(overlay)
-
-            # Subtle gradient scrim at bottom to guarantee subtitle readability without clutter
-            scrim_start = int(height * 0.70)
-            for y in range(scrim_start, height):
-                progress_y = (y - scrim_start) / (height - scrim_start)
-                alpha_val = int(190 * (progress_y ** 1.3))
-                draw.line([(0, y), (width, y)], fill=(6, 10, 18, min(200, alpha_val)), width=1)
 
             # Kinetic word-level phrases
             vo_text = (sc.get("voiceover") or sc.get("on_screen_text") or "").strip()
@@ -1475,6 +1482,8 @@ class OpenMontageAdapter:
                     start_offset = float((seed_val % max(1, int(max_slack * 10))) / 10.0) if max_slack > 0.8 else 0.0
 
                     def make_video_frame(t, c_vid=cropped_video, l_dur=loop_dur, s_off=start_offset, ov=p_scene["overlay"], phr=p_scene["phrases"], snum=sc_num, is_end=is_last, sc_dur=dur):
+                        if cancel_event and getattr(cancel_event, "is_set", lambda: False)():
+                            raise RuntimeError("Render cancelled by user/timeout token.")
                         # Continuous natural forward playback
                         target_t = s_off + float(t)
                         if target_t < l_dur:
@@ -1504,6 +1513,8 @@ class OpenMontageAdapter:
             # ---------------------------------------------------------
             if m_type == "animated_chart":
                 def make_chart_scene_frame(t, sc_dur=dur, theme=c_theme, snum=sc_num, ov=p_scene["overlay"], phr=p_scene["phrases"], is_end=is_last):
+                    if cancel_event and getattr(cancel_event, "is_set", lambda: False)():
+                        raise RuntimeError("Render cancelled by user/timeout token.")
                     chart_arr = render_dynamic_chart_canvas(t, sc_dur, width, height, theme=theme, scene_num=snum)
                     chart_img = Image.fromarray(chart_arr).convert("RGBA")
                     comp = Image.alpha_composite(chart_img, ov)
@@ -1527,6 +1538,8 @@ class OpenMontageAdapter:
                 p_bg = p_scene.get("base_bg")
 
                 def make_product_scene_frame(t, sc_dur=dur, mode=p_mode, bg=p_bg, snum=sc_num, ov=p_scene["overlay"], phr=p_scene["phrases"], is_end=is_last):
+                    if cancel_event and getattr(cancel_event, "is_set", lambda: False)():
+                        raise RuntimeError("Render cancelled by user/timeout token.")
                     frame_arr = render_dynamic_product_demo_canvas(t, sc_dur, width, height, mode=mode, bg_plate=bg, scene_num=snum)
                     frame_img = Image.fromarray(frame_arr).convert("RGBA")
                     if frame_img.size != (width, height):
@@ -1548,22 +1561,24 @@ class OpenMontageAdapter:
             cam_motion = p_scene["camera_motion"]
 
             def make_still_scene_frame(t, bg=base_bg, cam=cam_motion, sc_dur=dur, ov=p_scene["overlay"], phr=p_scene["phrases"], is_end=is_last, snum=sc_num):
+                if cancel_event and getattr(cancel_event, "is_set", lambda: False)():
+                    raise RuntimeError("Render cancelled by user/timeout token.")
                 # Smooth non-linear camera ease (cosine deceleration)
                 raw_progress = min(1.0, max(0.0, t / max(sc_dur, 0.1)))
                 alpha = 0.5 - 0.5 * math.cos(math.pi * raw_progress)
 
                 if cam == "slow_zoom_in":
-                    cur_scale = 1.14 - (0.14 * alpha)
+                    cur_scale = 1.08 - (0.08 * alpha)
                     crop_w, crop_h = int(width * cur_scale), int(height * cur_scale)
                     x0 = (oversized_w - crop_w) // 2
                     y0 = (oversized_h - crop_h) // 2
                 elif cam == "pan_right":
-                    cur_scale = 1.05
+                    cur_scale = 1.03
                     crop_w, crop_h = int(width * cur_scale), int(height * cur_scale)
                     x0 = int((oversized_w - crop_w) * alpha)
                     y0 = (oversized_h - crop_h) // 2
                 else:
-                    cur_scale = 1.05
+                    cur_scale = 1.03
                     crop_w, crop_h = int(width * cur_scale), int(height * cur_scale)
                     x0 = int((oversized_w - crop_w) * (1.0 - alpha))
                     y0 = (oversized_h - crop_h) // 2
@@ -1650,6 +1665,8 @@ class OpenMontageAdapter:
                     sync_progress(trans_pct, f"Composing transition '{t_type}' (scene {idx+1} -> {idx+2})...")
 
                 def make_trans_frame(u, g_a=gen_cur, g_b=gen_next, d_a=dur, trans_type=t_type, t_len=trans_dur):
+                    if cancel_event and getattr(cancel_event, "is_set", lambda: False)():
+                        raise RuntimeError("Render cancelled by user/timeout token.")
                     tau = max(0.0, min(1.0, u / max(0.01, t_len)))
                     f_a = g_a(d_a - t_len + u)
                     f_b = g_b(u)
@@ -1660,51 +1677,11 @@ class OpenMontageAdapter:
                 open_video_clips.append(trans_clip)
                 current_time_cursor += trans_dur
 
-        final_clip = concatenate_videoclips(clips, method="compose")
+        final_clip = concatenate_videoclips(clips, method="chain")
         total_dur = float(final_clip.duration)
+        speech_intervals: List[Tuple[float, float]] = tts_result.get("speech_intervals", []) if tts_result else []
 
-        # Master Audio Assembly
-        if sync_progress:
-            sync_progress(72, "Mixing multi-track cinematic fintech soundtrack and synchronized voiceover...")
-
-        master_audio_clips = []
-        speech_intervals: List[Tuple[float, float]] = []
-
-        if tts_result and tts_result.get("master_audio_path") and Path(tts_result["master_audio_path"]).exists():
-            try:
-                narration_clip = AudioFileClip(tts_result["master_audio_path"]).with_volume_scaled(1.15)
-                master_audio_clips.append(narration_clip)
-                open_audio_clips.append(narration_clip)
-                speech_intervals = tts_result.get("speech_intervals", [])
-                logger.info(f"[OpenMontageAdapter] Mounted {narration_clip.duration:.1f}s master voiceover narration.")
-            except Exception as narr_err:
-                logger.warning(f"[OpenMontageAdapter] Failed to mount narration audio: {narr_err}")
-
-        # Synthesize multi-track institutional soundtrack with dynamic sidechain ducking, transition whooshes, and CTA resolution
-        try:
-            soundtrack_clip = generate_fintech_soundtrack(
-                total_dur,
-                speech_intervals,
-                transition_timestamps=transition_timestamps,
-                cta_timestamp=max(0.0, total_dur - 3.2),
-                fps=44100
-            )
-            master_audio_clips.append(soundtrack_clip)
-            open_audio_clips.append(soundtrack_clip)
-            logger.info(f"[OpenMontageAdapter] Generated {total_dur:.1f}s fintech cinematic soundtrack with sidechain ducking, {len(transition_timestamps)} transition whooshes, and CTA resolution chime.")
-        except Exception as st_err:
-            logger.warning(f"[OpenMontageAdapter] Soundtrack synthesis notice: {st_err}")
-
-        if master_audio_clips:
-            try:
-                final_audio = CompositeAudioClip(master_audio_clips) if len(master_audio_clips) > 1 else master_audio_clips[0]
-                open_audio_clips.append(final_audio)
-                final_clip = final_clip.with_audio(final_audio)
-            except Exception as mix_err:
-                logger.warning(f"[OpenMontageAdapter] Audio mixing fallback: {mix_err}")
-                final_clip = final_clip.with_audio(master_audio_clips[0])
-
-        # High-Definition 30 FPS Rendering
+        # High-Definition 30 FPS Rendering with Decoupled Audio Pipeline
         if sync_progress:
             sync_progress(45, f"Rendering cinematic video at {out_w}x{out_h} (30 FPS, H.264 ultrafast)...")
 
@@ -1712,100 +1689,204 @@ class OpenMontageAdapter:
         if sync_progress:
             import proglog
             class RenderProgressLogger(proglog.ProgressBarLogger):
-                def __init__(self, progress_fn):
+                def __init__(self, progress_fn, cancel_tok=None):
                     super().__init__()
                     self.progress_fn = progress_fn
+                    self.cancel_tok = cancel_tok
                     self.last_pct = 0
                     self.last_time = 0
 
+                def check_cancellation(self):
+                    if self.cancel_tok and getattr(self.cancel_tok, "is_set", lambda: False)():
+                        raise RuntimeError("Render cancelled by cancellation token.")
+
                 def bars_callback(self, bar, attr, value, old_value=None):
+                    self.check_cancellation()
                     if not self.progress_fn:
                         return
                     if bar == "frame_index" and attr == "index":
                         tot = self.state.get("bars", {}).get(bar, {}).get("total", 0)
                         if tot:
-                            mapped_pct = min(96, max(45, 45 + int((value / tot) * 51)))
+                            mapped_pct = min(92, max(45, 45 + int((value / tot) * 47)))
                             now = time.time()
-                            if (mapped_pct > self.last_pct or mapped_pct >= 96) and (now - self.last_time >= 0.8):
+                            if (mapped_pct > self.last_pct or mapped_pct >= 92) and (now - self.last_time >= 0.8):
                                 self.last_pct = mapped_pct
                                 self.last_time = now
                                 self.progress_fn(mapped_pct, f"Rendering cinematic video frame {value}/{tot} ({mapped_pct}%)...")
 
                 def callback(self, **changes):
+                    self.check_cancellation()
                     if not self.progress_fn:
                         return
                     for k, v in self.state.get("bars", {}).items():
                         if k == "frame_index" and "total" in v and v["total"]:
                             idx = v.get("index", 0)
                             tot = v["total"]
-                            mapped_pct = min(96, max(45, 45 + int((idx / tot) * 51)))
+                            mapped_pct = min(92, max(45, 45 + int((idx / tot) * 47)))
                             now = time.time()
-                            if (mapped_pct > self.last_pct or mapped_pct >= 96) and (now - self.last_time >= 0.8):
+                            if (mapped_pct > self.last_pct or mapped_pct >= 92) and (now - self.last_time >= 0.8):
                                 self.last_pct = mapped_pct
                                 self.last_time = now
                                 self.progress_fn(mapped_pct, f"Rendering cinematic video frame {idx}/{tot} ({mapped_pct}%)...")
 
-            render_logger = RenderProgressLogger(sync_progress)
+            render_logger = RenderProgressLogger(sync_progress, cancel_event)
 
-        ffmpeg_threads = max(1, min(4, getattr(settings, "VIDEO_FFMPEG_THREADS", 2)))
+        ffmpeg_threads = max(1, min(2, getattr(settings, "VIDEO_FFMPEG_THREADS", 1)))
         ffmpeg_preset = getattr(settings, "VIDEO_FFMPEG_PRESET", "veryfast")
 
         ffmpeg_args = [
             "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
             "-profile:v", "high",
             "-level", "4.2",
-            "-threads", str(ffmpeg_threads),
-            "-x264-params", "rc-lookahead=10:sync-lookahead=5",
+            "-threads", "1",
+            "-x264-params", "rc-lookahead=4:sync-lookahead=2:bframes=0:threads=1",
+            "-bufsize", "2000k",
+            "-maxrate", "3500k",
         ] + scale_filter
 
+        temp_video_path = Path(out_path).parent / f"temp_raw_{Path(out_path).name}"
+        temp_files_to_unlink.append(temp_video_path)
+
         try:
+            # Render video stream ONLY in MoviePy (avoids ~200 MB audio chunk buffering in Python)
             final_clip.write_videofile(
-                out_path,
+                str(temp_video_path),
                 fps=30,  # Broadcast-standard 30 FPS
                 codec="libx264",
-                audio_codec="aac",
+                audio=False,
                 bitrate="4500k",
                 preset=ffmpeg_preset,
-                threads=1,  # Single-threaded Python avoids GIL contention
+                threads=1,  # Single-threaded Python avoids GIL and RAM bloat
                 ffmpeg_params=ffmpeg_args,
                 logger=render_logger
             )
             actual_duration = float(final_clip.duration)
         finally:
-            # Deterministic, leak-free disposal of all clip instances and temp files
+            # Deterministic, leak-free disposal of all clip instances before audio muxing
             for c in open_video_clips:
                 try:
                     c.close()
                 except Exception:
                     pass
-            for a in open_audio_clips:
-                try:
-                    a.close()
-                except Exception:
-                    pass
+            open_video_clips.clear()
             if final_clip:
                 try:
                     final_clip.close()
                 except Exception:
                     pass
+                final_clip = None
+            caption_cache.clear()
+            from services.memory_monitor import release_system_memory
+            release_system_memory()
+
+        # Step 4: Synthesize soundtrack directly to WAV and mux audio via streaming FFmpeg
+        if sync_progress:
+            sync_progress(94, "Mixing multi-track cinematic fintech soundtrack and synchronized voiceover...")
+
+        temp_soundtrack_wav = Path(out_path).parent / f"temp_soundtrack_{Path(out_path).stem}.wav"
+        temp_files_to_unlink.append(temp_soundtrack_wav)
+        soundtrack_ready = False
+        try:
+            from services.sound_design_service import sound_design_service
+            sound_design_service.synthesize_soundtrack_to_wav(
+                total_duration=actual_duration,
+                speech_intervals=speech_intervals,
+                transition_timestamps=transition_timestamps,
+                cta_timestamp=max(0.0, actual_duration - 3.2),
+                bpm=120.0,
+                output_wav_path=str(temp_soundtrack_wav)
+            )
+            soundtrack_ready = temp_soundtrack_wav.exists() and temp_soundtrack_wav.stat().st_size > 1000
+        except Exception as st_err:
+            logger.warning(f"[OpenMontageAdapter] Soundtrack WAV export notice: {st_err}")
+
+        # Stream-mux audio and video using FFmpeg without re-encoding video
+        try:
+            import imageio_ffmpeg
+            import subprocess
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+
+            has_narr = bool(tts_result and tts_result.get("master_audio_path") and Path(tts_result["master_audio_path"]).exists())
+            has_soundtrack = soundtrack_ready
+
+            if has_narr and has_soundtrack:
+                mux_cmd = [
+                    ffmpeg_exe, "-y",
+                    "-i", str(temp_video_path),
+                    "-i", str(tts_result["master_audio_path"]),
+                    "-i", str(temp_soundtrack_wav),
+                    "-filter_complex", "[1:a]volume=1.15[a0];[2:a]volume=0.85[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]",
+                    "-map", "0:v:0",
+                    "-map", "[aout]",
+                    "-c:v", "copy",
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-movflags", "+faststart",
+                    str(out_path)
+                ]
+            elif has_soundtrack:
+                mux_cmd = [
+                    ffmpeg_exe, "-y",
+                    "-i", str(temp_video_path),
+                    "-i", str(temp_soundtrack_wav),
+                    "-map", "0:v:0",
+                    "-map", "1:a:0",
+                    "-c:v", "copy",
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-movflags", "+faststart",
+                    str(out_path)
+                ]
+            elif has_narr:
+                mux_cmd = [
+                    ffmpeg_exe, "-y",
+                    "-i", str(temp_video_path),
+                    "-i", str(tts_result["master_audio_path"]),
+                    "-map", "0:v:0",
+                    "-map", "1:a:0",
+                    "-c:v", "copy",
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-movflags", "+faststart",
+                    str(out_path)
+                ]
+            else:
+                mux_cmd = [
+                    ffmpeg_exe, "-y",
+                    "-i", str(temp_video_path),
+                    "-c:v", "copy",
+                    "-movflags", "+faststart",
+                    str(out_path)
+                ]
+
+            logger.info(f"[OpenMontageAdapter] Executing streaming audio mux: {' '.join(mux_cmd[:6])}...")
+            mux_proc = subprocess.run(mux_cmd, capture_output=True, text=True, timeout=90)
+            if mux_proc.returncode != 0:
+                logger.error(f"[OpenMontageAdapter] FFmpeg audio mux failed: {mux_proc.stderr}")
+                if temp_video_path.exists():
+                    import shutil
+                    shutil.copy2(str(temp_video_path), str(out_path))
+            else:
+                logger.info(f"[OpenMontageAdapter] Successfully muxed synchronized audio and video into {out_path}")
+        except Exception as mux_err:
+            logger.error(f"[OpenMontageAdapter] Exception during FFmpeg audio mux: {mux_err}")
+            if temp_video_path.exists():
+                import shutil
+                shutil.copy2(str(temp_video_path), str(out_path))
+        finally:
             for p in temp_files_to_unlink:
                 try:
                     if p.exists():
                         p.unlink()
                 except Exception:
                     pass
-            caption_cache.clear()
-            from services.memory_monitor import release_system_memory
-            release_system_memory()
-
-        if tts_result and tts_result.get("master_audio_path"):
-            try:
-                p = Path(tts_result["master_audio_path"])
-                if p.exists():
-                    p.unlink()
-            except Exception:
-                pass
+            if tts_result and tts_result.get("master_audio_path"):
+                try:
+                    p = Path(tts_result["master_audio_path"])
+                    if p.exists():
+                        p.unlink()
+                except Exception:
+                    pass
 
         actual_file_duration = actual_duration
         probe_source = "moviepy_clip"

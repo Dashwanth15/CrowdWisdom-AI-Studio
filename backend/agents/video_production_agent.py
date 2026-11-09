@@ -450,6 +450,9 @@ class VideoProductionAgent(BaseHermesAgent):
             except Exception:
                 pass
 
+        from workers.job_manager import job_manager
+        cancel_token = job_manager.get_cancel_event(self._execution_id) if self._execution_id else None
+
         render_res = await openmontage_adapter.render_video(
             scenes=scenes,
             output_file_path=output_path,
@@ -457,7 +460,8 @@ class VideoProductionAgent(BaseHermesAgent):
             aspect_ratio=aspect_ratio,
             target_duration=duration,
             quality=quality,
-            progress_callback=_progress
+            progress_callback=_progress,
+            cancel_event=cancel_token,
         )
         return render_res
 

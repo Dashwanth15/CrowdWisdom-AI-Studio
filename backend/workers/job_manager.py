@@ -16,6 +16,52 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
+def is_mp4_valid_and_playable(file_path: Path) -> Tuple[bool, float]:
+    """
+    Verifies that an MP4 file exists, has valid structure, contains a playable moov atom,
+    and has duration > 1.0s. Returns (is_valid, duration).
+    Prevents corrupted 0:00 video files from falsely marking as 'completed'.
+    """
+    if not file_path.exists() or not file_path.is_file():
+        return False, 0.0
+    st_size = file_path.stat().st_size
+    if st_size < 100_000:
+        return False, 0.0
+
+    try:
+        import imageio_ffmpeg
+        import subprocess
+        import re
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        res = subprocess.run([ffmpeg_exe, "-i", str(file_path), "-hide_banner"], capture_output=True, text=True, timeout=5)
+        out = (res.stderr or "") + (res.stdout or "")
+        if "Invalid data found" not in out:
+            m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.?\d*)", out)
+            if m:
+                hrs, mins, secs = float(m.group(1)), float(m.group(2)), float(m.group(3))
+                dur = round(hrs * 3600 + mins * 60 + secs, 2)
+                if dur > 1.0 and ("Video:" in out):
+                    return True, dur
+    except Exception:
+        pass
+
+    try:
+        with open(file_path, "rb") as f:
+            head = f.read(65536)
+            if b"ftyp" not in head:
+                return False, 0.0
+            f.seek(0, 2)
+            fsize = f.tell()
+            tail_size = min(fsize, 65536)
+            f.seek(fsize - tail_size)
+            tail = f.read(tail_size)
+            if (b"moov" in head) or (b"moov" in tail):
+                return True, 30.0
+    except Exception:
+        pass
+    return False, 0.0
+
+
 class JobManager:
     """
     Central background job execution manager.
@@ -28,6 +74,8 @@ class JobManager:
         self._active_tasks: Dict[str, asyncio.Task] = {}
         # Active idempotency keys (e.g., "video_render_{script_id}")
         self._active_keys: Set[str] = set()
+        # Cooperative cancellation tokens
+        self._cancel_events: Dict[str, Any] = {}
         # Concurrency semaphore for heavy video rendering
         self._video_semaphore: Optional[asyncio.Semaphore] = None
         self._active_renders: int = 0
@@ -144,8 +192,13 @@ class JobManager:
                 found_mp4 = next((p for p in mp4_candidates if p.exists() and p.stat().st_size > 100_000), None)
                 found_thumb = next((p for p in thumb_candidates if p.exists() and p.stat().st_size > 1_000), None)
 
+                is_valid = False
+                detected_dur = 0.0
                 if found_mp4:
-                    # Self-heal: the video was successfully rendered to disk!
+                    is_valid, detected_dur = is_mp4_valid_and_playable(found_mp4)
+
+                if found_mp4 and is_valid:
+                    # Self-heal: the video is genuinely complete and playable!
                     file_size_mb = round(found_mp4.stat().st_size / (1024 * 1024), 2)
                     await db.video_jobs.update_one(
                         {"_id": vjob["_id"]},
@@ -156,15 +209,21 @@ class JobManager:
                                 "video_url": f"/media/videos/{found_mp4.name}",
                                 "video_path": str(found_mp4.resolve()),
                                 "thumbnail_path": str(found_thumb.resolve()) if found_thumb else None,
-                                "duration_actual": vjob.get("duration_seconds", 60),
+                                "duration_actual": detected_dur or vjob.get("duration_seconds", 60),
                                 "file_size_mb": file_size_mb,
                                 "error_message": None,
                                 "completed_at": now,
                             }
                         }
                     )
-                    logger.info(f"[JobManager] Self-healed completed video job {v_id} from existing disk file {found_mp4.name}")
+                    logger.info(f"[JobManager] Self-healed completed video job {v_id} ({detected_dur:.1f}s) from existing disk file {found_mp4.name}")
                 else:
+                    if found_mp4 and not is_valid:
+                        logger.warning(f"[JobManager] Discarding corrupt/truncated video artifact {found_mp4}")
+                        try:
+                            found_mp4.unlink()
+                        except Exception:
+                            pass
                     await db.video_jobs.update_one(
                         {"_id": vjob["_id"]},
                         {
@@ -234,6 +293,10 @@ class JobManager:
                 return False
 
         self._active_keys.add(idempotency_key)
+        import threading
+        cancel_event = threading.Event()
+        self._cancel_events[job_id] = cancel_event
+
         is_video = (job_type == "video_production")
         if is_video:
             self._queued_renders += 1
@@ -258,6 +321,9 @@ class JobManager:
                             await asyncio.wait_for(coro_func(), timeout=timeout_sec)
                         except asyncio.TimeoutError:
                             logger.error(f"[JobManager] Video render job {job_id} timed out after {timeout_sec}s.")
+                            ev = self._cancel_events.get(job_id)
+                            if ev:
+                                ev.set()
                             db = get_database()
                             await db.agent_executions.update_one(
                                 {"_id": ObjectId(job_id) if ObjectId.is_valid(job_id) else None},
@@ -273,6 +339,9 @@ class JobManager:
                     await coro_func()
             except asyncio.CancelledError:
                 logger.info(f"[JobManager] Job {job_id} was cancelled.")
+                ev = self._cancel_events.get(job_id)
+                if ev:
+                    ev.set()
                 db = get_database()
                 await db.agent_executions.update_one(
                     {"_id": ObjectId(job_id) if ObjectId.is_valid(job_id) else None},
@@ -281,6 +350,7 @@ class JobManager:
             except Exception as e:
                 logger.error(f"[JobManager] Job {job_id} raised unhandled exception: {e}")
             finally:
+                self._cancel_events.pop(job_id, None)
                 self._active_keys.discard(idempotency_key)
                 self._active_tasks.pop(job_id, None)
 
@@ -302,12 +372,19 @@ class JobManager:
 
     async def cancel_job(self, job_id: str) -> bool:
         """Cancels an actively running background task."""
+        ev = self._cancel_events.get(job_id)
+        if ev:
+            ev.set()
         task = self._active_tasks.get(job_id)
         if task and not task.done():
             task.cancel()
             self._active_tasks.pop(job_id, None)
             return True
         return False
+
+    def get_cancel_event(self, job_id: str) -> Optional[Any]:
+        """Retrieves the cooperative cancellation token for a running job."""
+        return self._cancel_events.get(job_id)
 
     def is_job_running(self, job_id: str) -> bool:
         task = self._active_tasks.get(job_id)

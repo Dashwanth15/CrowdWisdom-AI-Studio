@@ -79,6 +79,20 @@ async def generate_video(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found.")
 
+    # 3. Active Render Deduplication Guard: prevent duplicate simultaneous renders
+    active_job = await db.video_jobs.find_one({
+        "status": {"$in": ["queued", "processing", "composing", "rendering"]},
+        "$or": [
+            {"script_id": data.script_id},
+            {"campaign_id": data.campaign_id}
+        ]
+    })
+    if active_job:
+        raise HTTPException(
+            status_code=409,
+            detail="A video generation job is already actively in progress for this campaign/script. Please wait for it to complete."
+        )
+
     try:
         result = await orchestrator.launch_video_production(
             campaign_id=data.campaign_id,
@@ -98,6 +112,7 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
     """Self-heals orphaned or stalled video jobs when fetched by API."""
     if not doc:
         return doc
+    from workers.job_manager import is_mp4_valid_and_playable
     status = doc.get("status")
     if status in ("queued", "processing", "composing", "rendering"):
         now = datetime.now(timezone.utc)
@@ -122,7 +137,12 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
                 found_mp4 = next((p for p in mp4_candidates if p.exists() and p.stat().st_size > 100_000), None)
                 found_thumb = next((p for p in thumb_candidates if p.exists() and p.stat().st_size > 1_000), None)
 
+                is_valid = False
+                detected_dur = 0.0
                 if found_mp4:
+                    is_valid, detected_dur = is_mp4_valid_and_playable(found_mp4)
+
+                if found_mp4 and is_valid:
                     file_size_mb = round(found_mp4.stat().st_size / (1024 * 1024), 2)
                     updates = {
                         "status": "completed",
@@ -130,7 +150,7 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
                         "video_url": f"/media/videos/{found_mp4.name}",
                         "video_path": str(found_mp4.resolve()),
                         "thumbnail_path": str(found_thumb.resolve()) if found_thumb else None,
-                        "duration_actual": doc.get("duration_seconds", 60),
+                        "duration_actual": detected_dur or doc.get("duration_seconds", 60),
                         "file_size_mb": file_size_mb,
                         "error_message": None,
                         "completed_at": now,
@@ -138,6 +158,11 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
                     await db.video_jobs.update_one({"_id": doc["_id"]}, {"$set": updates})
                     doc.update(updates)
                 else:
+                    if found_mp4 and not is_valid:
+                        try:
+                            found_mp4.unlink()
+                        except Exception:
+                            pass
                     updates = {
                         "status": "failed",
                         "error_message": "Video rendering was interrupted. Click Retry to re-render.",
@@ -159,9 +184,9 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
             Path("media/videos") / clean_name,
             Path(doc.get("video_path") or ""),
         ]
-        file_exists = any(c.exists() and c.is_file() and c.stat().st_size > 100_000 for c in candidates if str(c))
-        if not file_exists:
-            # Physical file missing from container filesystem (e.g. after deployment or ephemeral restart)
+        file_valid = any(c.exists() and c.is_file() and is_mp4_valid_and_playable(c)[0] for c in candidates if str(c))
+        if not file_valid:
+            # Physical file missing or corrupted from container filesystem (e.g. after deployment or ephemeral restart)
             now = datetime.now(timezone.utc)
             updates = {
                 "status": "failed",

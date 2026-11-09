@@ -6,10 +6,12 @@ import time
 backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, backend_dir)
 
+import pytest
 from database.connection import get_database, connect_to_mongo
 from bson import ObjectId
 from video_engine.openmontage_adapter import openmontage_adapter
 
+@pytest.mark.asyncio
 async def test_fast_render():
     await connect_to_mongo()
     db = get_database()
@@ -18,6 +20,8 @@ async def test_fast_render():
     script = await db.scripts.find_one({"status": "approved"})
     if not script:
         script = await db.scripts.find_one({"scenes": {"$exists": True, "$ne": []}})
+    if not script or not script.get("scenes"):
+        pytest.skip("No script with scenes found in database for fast render test.")
     
     print(f"Testing fast video rendering on script: '{script.get('title')}' with {len(script.get('scenes', []))} scenes...")
 
