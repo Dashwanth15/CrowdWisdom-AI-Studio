@@ -112,7 +112,15 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
     """Self-heals orphaned or stalled video jobs when fetched by API."""
     if not doc:
         return doc
-    from workers.job_manager import is_mp4_valid_and_playable
+    from workers.job_manager import is_mp4_valid_and_playable, job_manager
+    v_id = str(doc["_id"])
+
+    # If the task is actively executing in background workers on this instance, never prematurely abort
+    if v_id in job_manager._active_tasks:
+        active_task = job_manager._active_tasks[v_id]
+        if not active_task.done():
+            return doc
+
     status = doc.get("status")
     if status in ("queued", "processing", "composing", "rendering"):
         now = datetime.now(timezone.utc)
@@ -122,8 +130,10 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
         if anchor_time:
             if anchor_time.tzinfo is None:
                 anchor_time = anchor_time.replace(tzinfo=timezone.utc)
-            # If job has been in intermediate state for > 5 minutes
-            if (now - anchor_time).total_seconds() > 300:
+            # Safe timeout: Dynamic based on video duration or configured timeout (min 600s)
+            dur_target = float(doc.get("duration_seconds") or doc.get("target_duration") or 60.0)
+            timeout_threshold = max(float(getattr(settings, "VIDEO_RENDER_TIMEOUT_SECONDS", 600)), dur_target * 10)
+            if (now - anchor_time).total_seconds() > timeout_threshold:
                 v_id = str(doc["_id"])
                 from pathlib import Path
                 mp4_candidates = [

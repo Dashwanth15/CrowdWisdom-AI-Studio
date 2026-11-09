@@ -26,7 +26,7 @@ services:
       - key: MAX_CONCURRENT_VIDEO_RENDERS
         value: "1"
       - key: VIDEO_RENDER_TIMEOUT_SECONDS
-        value: "300"
+        value: "600"
       - key: VIDEO_FFMPEG_THREADS
         value: "2"
       - key: VIDEO_FFMPEG_PRESET

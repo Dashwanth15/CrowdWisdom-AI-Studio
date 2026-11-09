@@ -82,7 +82,7 @@ class Settings(BaseSettings):
 
     # Video Production Memory & Concurrency Controls
     MAX_CONCURRENT_VIDEO_RENDERS: int = Field(default=1, validation_alias=AliasChoices("MAX_CONCURRENT_VIDEO_RENDERS", "MAX_CONCURRENT_RENDERS"))
-    VIDEO_RENDER_TIMEOUT_SECONDS: int = Field(default=300, validation_alias=AliasChoices("VIDEO_RENDER_TIMEOUT_SECONDS", "RENDER_TIMEOUT_SECONDS"))
+    VIDEO_RENDER_TIMEOUT_SECONDS: int = Field(default=600, validation_alias=AliasChoices("VIDEO_RENDER_TIMEOUT_SECONDS", "RENDER_TIMEOUT_SECONDS"))
     VIDEO_FFMPEG_THREADS: int = Field(default=2, validation_alias=AliasChoices("VIDEO_FFMPEG_THREADS", "FFMPEG_THREADS"))
     VIDEO_FFMPEG_PRESET: str = Field(default="veryfast", validation_alias=AliasChoices("VIDEO_FFMPEG_PRESET", "FFMPEG_PRESET"))
     VIDEO_RENDER_MEMORY_LIMIT_MB: int = Field(default=450, validation_alias=AliasChoices("VIDEO_RENDER_MEMORY_LIMIT_MB", "RENDER_MEMORY_LIMIT_MB"))
