@@ -222,6 +222,7 @@ async def health_check():
         "status": "ok",
         "service": "CrowdWisdom AI Studio",
         "version": "1.0.0",
+        "commit": os.environ.get("RENDER_GIT_COMMIT", os.environ.get("GIT_COMMIT", "local-dev")),
         "database": db_status,
         "environment": settings.APP_ENV,
         "memory": {

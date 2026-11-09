@@ -236,8 +236,8 @@ async def serve_thumbnail(filename: str):
     return FileResponse(str(thumb_path), media_type="image/jpeg")
 
 
-@media_router.get("/assets/{filepath:path}")
-async def serve_asset(filepath: str):
+@media_router.api_route("/assets/{filepath:path}", methods=["GET", "HEAD"])
+async def serve_asset(filepath: str, request: Request):
     """Serve storyboard scene visual asset files with robust path resolution across project, backend, stock footage, and fallback dirs."""
     import pathlib
     clean_filepath = filepath.replace("\\", "/").lstrip("/")
@@ -297,7 +297,11 @@ async def serve_asset(filepath: str):
         "Accept-Ranges": "bytes",
         "Content-Length": str(os.path.getsize(asset_path)),
         "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "Content-Range, Accept-Ranges, Content-Length, Content-Type",
     }
+    if request.method == "HEAD":
+        return Response(status_code=200, headers=headers)
+
     return FileResponse(str(asset_path), media_type=media_type, headers=headers)
 
 
