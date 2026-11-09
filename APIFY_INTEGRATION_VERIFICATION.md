@@ -146,3 +146,4 @@ To protect the user's free monthly allowance ($5.00) from accidental exhaustion:
 1. `max_results` is constrained to a default of 10 to 25 items per query.
 2. Actor runs enforce a hard timeout of 60 seconds (`timeout_secs=60`).
 3. Results are cached in MongoDB Atlas (`market_research` and `advertisements` collections) with an automated TTL to prevent duplicate actor runs for identical keywords.
+

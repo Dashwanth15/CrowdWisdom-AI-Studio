@@ -228,6 +228,10 @@ class AdvertisementOut(BaseModel):
     data_source: Optional[str] = "meta_ads_library"
     ad_classification: Optional[str] = "LIVE_META_AD"  # LIVE_META_AD | HISTORICAL_META_AD | CACHED_AD | VERIFIED_DOMAIN_BENCHMARK | AI_GENERATED_HYPOTHESIS
     is_benchmark: bool = False
+    relevance_category: Optional[str] = "UNKNOWN"  # DIRECT_COMPETITOR | INDIRECT_COMPETITOR | FINANCIAL_PLATFORM | BROKER_OR_TRADING_PLATFORM | FINANCIAL_EDUCATION | UNRELATED_ADVERTISER | UNKNOWN
+    relevance_explanation: Optional[str] = None
+    is_competitor: bool = False
+    country_evidence_type: Optional[str] = "query_country_filter"  # explicit_meta_targeting | query_country_filter
     country: Optional[str] = None
     advertiser: Optional[str] = "Unknown"
     headline: Optional[str] = None

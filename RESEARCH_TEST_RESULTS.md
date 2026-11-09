@@ -136,3 +136,4 @@ dist/assets/index-BHVZLvAu.js   1,254.73 kB │ gzip: 358.53 kB
 1. **0 TypeScript Errors**: Full type safety across all interfaces and API contracts.
 2. **0 Bundle Leaks**: Scanned `dist/` directory; confirmed no raw API keys or sensitive secrets are embedded in compiled JavaScript or CSS bundles.
 3. **Clean Asset Generation**: All components (`InsightsPage`, `ResearchPage`, navigation bars, provider pills) compiled without warnings.
+

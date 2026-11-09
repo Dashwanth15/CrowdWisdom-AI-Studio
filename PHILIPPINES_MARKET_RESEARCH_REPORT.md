@@ -79,3 +79,4 @@ To comply with Philippine Securities Regulation Code (SRC) and SEC mandates:
 4. **Mandatory SEC Philippines Disclaimer**:
    - Every script, advertisement, and asset created for the Philippines MUST feature:
    > *"Trading and investing in equities, REITs, and securities involve financial risk, including the possible loss of principal. CrowdWisdom AI Studio provides objective sentiment research and consensus analysis for educational purposes only and does not offer licensed investment advice or solicit securities transactions under the Philippine Securities Regulation Code."*
+

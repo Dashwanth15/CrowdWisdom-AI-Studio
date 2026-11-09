@@ -441,6 +441,24 @@ export const ResearchPage: React.FC = () => {
                           {ad.country === 'IN' ? '🇮🇳 IN' : ad.country === 'PH' ? '🇵🇭 PH' : ad.country}
                         </span>
                       )}
+
+                      {ad.relevance_category && (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${
+                          ad.relevance_category === 'DIRECT_COMPETITOR'
+                            ? 'bg-rose-500/15 border-rose-500/40 text-rose-300 font-semibold'
+                            : ad.relevance_category === 'INDIRECT_COMPETITOR'
+                            ? 'bg-blue-500/15 border-blue-500/40 text-blue-300'
+                            : ad.relevance_category === 'BROKER_OR_TRADING_PLATFORM'
+                            ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
+                            : ad.relevance_category === 'FINANCIAL_PLATFORM'
+                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                            : ad.relevance_category === 'UNRELATED_ADVERTISER'
+                            ? 'bg-neutral-800 border-neutral-700 text-neutral-400'
+                            : 'bg-[#10141C] border-[#232B38] text-[#8EA2C6]'
+                        }`} title={ad.relevance_explanation || ''}>
+                          {ad.relevance_category.replace(/_/g, ' ')}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1">

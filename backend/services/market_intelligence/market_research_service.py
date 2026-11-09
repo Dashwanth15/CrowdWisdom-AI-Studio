@@ -442,8 +442,8 @@ class MarketResearchService:
                 },
                 {
                     "country": "PH",
-                    "topic": "overseas filipino worker remittances & wealth allocation",
-                    "finding": "Bangko Sentral ng Pilipinas (BSP) recorded overseas Filipino worker (OFW) cash remittances exceeding $37 billion annually. Growing financial literacy drives OFWs to allocate portions of earnings into Philippine dividend REITs and blue chips rather than solely low-interest savings.",
+                    "topic": "overseas filipino worker macroeconomic remittances",
+                    "finding": "Bangko Sentral ng Pilipinas (BSP) recorded overseas Filipino worker (OFW) cash remittances totaling $37.2 billion in 2023, representing approximately 8.5% of Philippine GDP and serving as a vital macroeconomic liquidity foundation for household consumption.",
                     "source_url": "https://www.bsp.gov.ph/SitePages/MediaAndResearch/EconomicFinancialStatistics.aspx",
                     "publisher": "Bangko Sentral ng Pilipinas (BSP)",
                     "publication_date": "2024-02-15",
@@ -454,6 +454,22 @@ class MarketResearchService:
                     "relevant_audience_segment": "ph_ofw_wealth_builder",
                     "is_verified_fact": True,
                     "discovery_provider": "BSP Official Statistics",
+                },
+                {
+                    "country": "PH",
+                    "topic": "ofw capital allocation to equities and reits (market hypothesis)",
+                    "finding": "Industry broker commentaries and retail investing surveys (e.g. COL Financial) indicate emerging interest among OFWs in dividend-yielding Philippine REITs and equities to build long-term passive income, although direct market participation remains low relative to total remittance volumes due to accessibility and financial literacy barriers.",
+                    "source_url": "https://www.colfinancial.com/ape/Final2/home/investing_in_reits.asp",
+                    "publisher": "Industry Broker Surveys & Financial Journalism",
+                    "publication_date": "2024-03-20",
+                    "retrieval_date": now_str,
+                    "confidence_level": "moderate",
+                    "confidence_score": 7.4,
+                    "evidence_type": "industry_hypothesis",
+                    "relevant_audience_segment": "ph_ofw_wealth_builder",
+                    "is_verified_fact": False,
+                    "evidence_classification": "AI_INTERPRETATION",
+                    "discovery_provider": "Broker Investor Education",
                 },
                 {
                     "country": "PH",
@@ -478,11 +494,13 @@ class MarketResearchService:
             b["claim_text"] = b["finding"]
             b["article_title"] = b.get("topic", "").title()
             b["supporting_excerpt"] = b["finding"]
-            b["evidence_classification"] = "DIRECTLY_SUPPORTED"
-            b["verification_status"] = "verified"
+            is_fact = b.get("is_verified_fact", True)
+            if "evidence_classification" not in b:
+                b["evidence_classification"] = "DIRECTLY_SUPPORTED" if is_fact else "AI_INTERPRETATION"
+            b["verification_status"] = "verified" if is_fact else "unverified"
             b["date_verification_status"] = "verified"
-            b["source_tier"] = 1
-            b["source_tier_name"] = "Official Regulators & Central Exchanges"
+            b["source_tier"] = 1 if is_fact else 3
+            b["source_tier_name"] = "Official Regulators & Central Exchanges" if is_fact else "Industry Portals & Broker Platforms"
             b["retrieval_timestamp"] = b.get("retrieval_date", now_str)
             b["is_benchmark"] = True
 

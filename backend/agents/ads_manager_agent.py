@@ -36,6 +36,145 @@ class AdsManagerAgent(BaseHermesAgent):
     agent_name = "Ads Manager Agent"
     agent_description = "Discovers and analyzes competitor advertisements, extracts marketing intelligence and advertising patterns."
 
+    @staticmethod
+    def classify_advertiser_relevance(
+        advertiser: str,
+        text: str = "",
+        headline: str = "",
+        landing_page: str = "",
+        cta: str = "",
+    ) -> Dict[str, Any]:
+        """
+        Classifies an advertisement into one of 7 distinct relevance categories:
+        - DIRECT_COMPETITOR: Market sentiment aggregators, crowd wisdom platforms, options flow tools, social sentiment analytics.
+        - INDIRECT_COMPETITOR: Stock screeners, charting platforms, general equity research tools, financial news aggregators.
+        - FINANCIAL_PLATFORM: Digital payment wallets, general banking apps, neobanks.
+        - BROKER_OR_TRADING_PLATFORM: Regulated stock brokers and derivative trading execution venues.
+        - FINANCIAL_EDUCATION: Trading courses, mentorship programs, stock market academies.
+        - UNRELATED_ADVERTISER: E-commerce platforms, retail consumer goods, casual gaming, apparel, logistics.
+        - UNKNOWN: Insufficient metadata to categorize confidently.
+        """
+        adv_lower = (advertiser or "").lower()
+        full_text = f"{advertiser} {text} {headline} {landing_page} {cta}".lower()
+
+        # 1. UNRELATED_ADVERTISER (Check first to immediately catch e-commerce, shopping, casual gaming)
+        unrelated_entities = [
+            "shopee", "lazada", "amazon", "flipkart", "shein", "temu", "myntra",
+            "zomato", "swiggy", "grab", "foodpanda", "uber", "ola", "airbnb", "booking.com",
+            "casino", "rummy", "poker", "betting", "apparel", "clothing", "fashion",
+            "shoes", "beauty", "cosmetics", "grocery", "ecommerce", "e-commerce",
+            "delivery", "supermarket", "retail mall", "shopping"
+        ]
+        if any(ent in adv_lower for ent in ["shopee", "lazada", "amazon", "flipkart", "shein", "temu", "myntra"]):
+            return {
+                "relevance_category": "UNRELATED_ADVERTISER",
+                "relevance_explanation": f"{advertiser} is a general consumer e-commerce marketplace retrieved due to broad keyword matching; completely unrelated to financial trading intelligence.",
+                "is_competitor": False,
+            }
+        financial_keywords = [
+            "stock", "trade", "trading", "invest", "investing", "market", "f&o", "options",
+            "equity", "share", "forex", "crypto", "fund", "broker", "pse", "nse", "bse",
+            "demat", "dividend", "securities", "wealth", "portfolio", "reit"
+        ]
+        has_finance = any(k in full_text for k in financial_keywords)
+        if not has_finance and any(u in full_text for u in ["shop", "buy now", "discount", "free shipping", "sale", "store", "order", "delivery"]):
+            return {
+                "relevance_category": "UNRELATED_ADVERTISER",
+                "relevance_explanation": f"{advertiser} advertises retail consumer products/services with no financial trading or investment relevance.",
+                "is_competitor": False,
+            }
+
+        # 2. DIRECT_COMPETITOR (Sentiment aggregators, crowd wisdom, options flow, retail trading intelligence)
+        direct_competitor_entities = [
+            "crowdwisdom", "stocktwits", "trendlyne", "marketsmith", "unusual whales",
+            "hawky", "social trading", "sentiment radar", "crowd sentiment", "options sentiment",
+            "bullsmart", "trading signals", "market sentiment"
+        ]
+        if any(d in adv_lower for d in ["hawky", "stocktwits", "trendlyne", "marketsmith", "unusual whales", "bullsmart"]):
+            return {
+                "relevance_category": "DIRECT_COMPETITOR",
+                "relevance_explanation": f"{advertiser} directly provides retail sentiment analytics, options flow tools, or crowd intelligence overlapping with CrowdWisdom.",
+                "is_competitor": True,
+            }
+        if any(d in full_text for d in ["crowd sentiment", "market sentiment aggregator", "social trading sentiment", "retail sentiment index", "sentiment signals"]):
+            return {
+                "relevance_category": "DIRECT_COMPETITOR",
+                "relevance_explanation": f"{advertiser} promotes market sentiment intelligence and consensus analytics directly competing with CrowdPulse.",
+                "is_competitor": True,
+            }
+
+        # 3. INDIRECT_COMPETITOR (Screeners, charting platforms, general equity research tools)
+        indirect_entities = [
+            "tradingview", "tickertape", "moneycontrol", "investagrams", "chartink",
+            "screener.in", "finviz", "seekingalpha", "benzinga", "investing.com", "bloomberg"
+        ]
+        if any(ind in adv_lower for ind in indirect_entities) or any(ind in landing_page for ind in indirect_entities):
+            return {
+                "relevance_category": "INDIRECT_COMPETITOR",
+                "relevance_explanation": f"{advertiser} offers financial charting, stock screening, or equity research addressing trader analysis needs without crowd sentiment focus.",
+                "is_competitor": True,
+            }
+        if any(k in full_text for k in ["stock screener", "charting platform", "technical charts", "fundamental analysis tool"]):
+            return {
+                "relevance_category": "INDIRECT_COMPETITOR",
+                "relevance_explanation": f"{advertiser} offers market data, technical charts, or equity screeners.",
+                "is_competitor": True,
+            }
+
+        # 4. FINANCIAL_PLATFORM (Mobile wallets, commercial banks, payment apps)
+        fintech_wallets_banks = [
+            "gcash", "maya", "paytm", "phonepe", "metrobank", "bdo", "bpi", "security bank",
+            "hdfc", "icici", "sbi", "kotak", "axis", "unionbank", "revolut", "wise"
+        ]
+        if any(w in adv_lower for w in fintech_wallets_banks) or any(w in landing_page for w in ["gcash.com", "maya.ph", "metrobank"]):
+            return {
+                "relevance_category": "FINANCIAL_PLATFORM",
+                "relevance_explanation": f"{advertiser} is a licensed commercial bank or mobile wallet platform providing financial transactions, banking, and payment ecosystems.",
+                "is_competitor": False,
+            }
+        if any(k in full_text for k in ["mobile wallet", "savings account", "credit card", "personal loan", "cash remittance", "wire transfer"]):
+            return {
+                "relevance_category": "FINANCIAL_PLATFORM",
+                "relevance_explanation": f"{advertiser} provides general banking, remittance, or wallet services.",
+                "is_competitor": False,
+            }
+
+        # 5. FINANCIAL_EDUCATION (Courses, academies, trading mentorship)
+        education_keywords = ["academy", "course", "masterclass", "mentorship", "learn to trade", "trading workshop", "webinar", "financial literacy program"]
+        if any(k in full_text for k in education_keywords) and not any(k in full_text for k in ["brokerage", "demat", "order execution", "open account"]):
+            return {
+                "relevance_category": "FINANCIAL_EDUCATION",
+                "relevance_explanation": f"{advertiser} sells financial education, courses, or trading mentorship rather than software analytics.",
+                "is_competitor": False,
+            }
+
+        # 6. BROKER_OR_TRADING_PLATFORM (Brokers, execution venues, CFD platforms)
+        broker_entities = [
+            "zerodha", "angel one", "groww", "upstox", "col financial", "first metro sec",
+            "bidana", "trade-investing", "interactive brokers", "etoro", "plus500", "exness",
+            "ic markets", "5paisa", "motilal oswal", "dhan", "fyers"
+        ]
+        if any(b in adv_lower for b in broker_entities) or any(k in full_text for k in ["brokerage", "demat account", "zero commission brokerage", "trade from ₱", "trade from ₹", "open demat", "trading account"]):
+            return {
+                "relevance_category": "BROKER_OR_TRADING_PLATFORM",
+                "relevance_explanation": f"{advertiser} is a registered brokerage or trade execution venue offering order routing and clearing.",
+                "is_competitor": False,
+            }
+
+        # 7. UNKNOWN / GENERAL FINANCIAL
+        if has_finance:
+            return {
+                "relevance_category": "BROKER_OR_TRADING_PLATFORM" if "trade" in full_text else "INDIRECT_COMPETITOR",
+                "relevance_explanation": f"{advertiser} advertises financial services; classified by general context clues.",
+                "is_competitor": False,
+            }
+
+        return {
+            "relevance_category": "UNKNOWN",
+            "relevance_explanation": f"Insufficient advertising metadata to categorize {advertiser} with high confidence.",
+            "is_competitor": False,
+        }
+
     def normalize_ad(
         self,
         ad: Dict[str, Any],
@@ -85,11 +224,14 @@ class AdsManagerAgent(BaseHermesAgent):
             or ad.get("link_caption")
         )
 
+        has_end_date = bool(ad.get("endDateFormatted") or ad.get("end_date") or ad.get("lastSeenDate"))
         is_active_flag = ad.get("isActive")
-        if is_active_flag is not None:
-            active_status_val = "active" if is_active_flag else "inactive"
+        if is_active_flag is False or has_end_date:
+            active_status_val = "inactive"
+        elif is_active_flag is True:
+            active_status_val = "active"
         else:
-            active_status_val = ad.get("active_status") or ad.get("status") or ("active" if not ad.get("end_date") and not ad.get("endDateFormatted") else "inactive")
+            active_status_val = ad.get("active_status") or ad.get("status") or "active"
 
         is_bench = bool(ad.get("is_benchmark") or str(ad_id).startswith("ad_meta_benchmark") or str(ad_id).startswith("ad_meta_ph_benchmark") or not ad_id)
         if is_bench:
@@ -102,12 +244,22 @@ class AdsManagerAgent(BaseHermesAgent):
             ad_category = "HISTORICAL_META_AD"
             data_src = "meta_ads_library"
 
+        raw_targeted = ad.get("targetedOrReachedCountries") or []
+        if raw_targeted:
+            country_evidence_type = "explicit_meta_targeting"
+            country_evidence_details = f"Verified target countries reported by Meta: {', '.join(raw_targeted)}"
+        else:
+            country_evidence_type = "query_country_filter"
+            country_evidence_details = f"Country targeting inferred from search filter ({target_country}); no explicit country array in Meta snapshot"
+
         targeting_info = ad.get("targeting_evidence")
         if not targeting_info:
             targeting_info = {
                 "publisher_platforms": ad.get("publisherPlatform") or [],
-                "targeted_countries": ad.get("targetedOrReachedCountries") or [],
+                "targeted_countries": raw_targeted,
                 "query_country": target_country,
+                "country_evidence_type": country_evidence_type,
+                "country_evidence_details": country_evidence_details,
             }
 
         headline_val = snapshot.get("title") or ad.get("title") or (ad.get("ad_creative_link_titles", [None])[0] if isinstance(ad.get("ad_creative_link_titles"), list) and ad.get("ad_creative_link_titles") else None)
@@ -128,6 +280,15 @@ class AdsManagerAgent(BaseHermesAgent):
             or ad.get("landingPage")
         )
 
+        # Classify competitor relevance
+        relevance = self.classify_advertiser_relevance(
+            advertiser=advertiser_name,
+            text=body_text,
+            headline=headline_val or "",
+            landing_page=landing_page_val or "",
+            cta=cta_val or "",
+        )
+
         observed_facts = ad.get("observed_facts", [])
         if not observed_facts:
             facts = [f"Advertiser: {advertiser_name}"]
@@ -137,6 +298,8 @@ class AdsManagerAgent(BaseHermesAgent):
                 facts.append(f"Format: {creative_fmt}")
             if ad.get("publisherPlatform"):
                 facts.append(f"Platforms: {', '.join(ad.get('publisherPlatform'))}")
+            facts.append(f"Relevance: {relevance['relevance_category']}")
+            facts.append(f"Targeting: {country_evidence_type}")
             observed_facts = facts
 
         return {
@@ -153,6 +316,11 @@ class AdsManagerAgent(BaseHermesAgent):
             "headline": headline_val,
             "ad_text": body_text,
             "ad_copy": body_text,
+            "relevance_category": relevance["relevance_category"],
+            "relevance_explanation": relevance["relevance_explanation"],
+            "is_competitor": relevance["is_competitor"],
+            "country_evidence_type": country_evidence_type,
+            "country_evidence_details": country_evidence_details,
             "creative_reference": (
                 snapshot.get("pageProfilePictureUrl")
                 or ad.get("video_hd_url")
@@ -495,17 +663,27 @@ Respond with JSON: {{"evaluations": [{{"ad_id": "...", "target_audience_hypothes
         if not ads:
             return []
 
-        # Prepare summary for LLM
+        # Filter out unrelated advertisers (e.g. e-commerce marketplaces like Shopee)
+        relevant_ads = [
+            a for a in ads
+            if a.get("relevance_category") != "UNRELATED_ADVERTISER"
+        ]
+        if not relevant_ads:
+            relevant_ads = ads
+
+        # Prepare summary for LLM using only relevant financial & competitor ads
         ads_summary = [
             {
                 "advertiser": a["advertiser"],
+                "relevance_category": a.get("relevance_category", "UNKNOWN"),
+                "relevance_explanation": a.get("relevance_explanation", ""),
                 "pain_point": a.get("pain_point"),
                 "marketing_angle": a.get("marketing_angle"),
                 "hook": a.get("hook"),
                 "target_audience": a.get("target_audience_hypothesis"),
                 "ad_id": a["ad_id"],
             }
-            for a in ads[:50]  # Limit to 50 for context
+            for a in relevant_ads[:50]  # Limit to 50 for context
         ]
 
         try:

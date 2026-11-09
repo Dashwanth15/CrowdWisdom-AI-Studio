@@ -201,3 +201,129 @@ class TestComplianceAndContextBuilder:
         directive_ph = market_context_builder.get_agent_prompt_directive("PH", "script")
         assert "NEVER promise guaranteed returns" in directive_ph
         assert "Research-Backed Clarity for More Informed Investing" in directive_ph
+
+
+class TestCompetitorRelevanceClassification:
+    """Tests 7-category competitor relevance classification and unrelated ad filtering."""
+
+    def test_shopee_classified_as_unrelated(self):
+        res = AdsManagerAgent.classify_advertiser_relevance(
+            advertiser="Shopee",
+            text="Big Sale 11.11! Free shipping on millions of items.",
+            headline="Shop Now",
+            landing_page="https://shopee.com",
+            cta="Install now"
+        )
+        assert res["relevance_category"] == "UNRELATED_ADVERTISER"
+        assert res["is_competitor"] is False
+        assert "Shopee is a general consumer e-commerce marketplace" in res["relevance_explanation"]
+
+    def test_direct_competitor_classification(self):
+        res = AdsManagerAgent.classify_advertiser_relevance(
+            advertiser="Hawky",
+            text="Real-time market sentiment and options flow tracker.",
+            headline="Market Sentiment Radar",
+            landing_page="https://hawky.ai",
+            cta="Learn more"
+        )
+        assert res["relevance_category"] == "DIRECT_COMPETITOR"
+        assert res["is_competitor"] is True
+
+    def test_indirect_competitor_classification(self):
+        res = AdsManagerAgent.classify_advertiser_relevance(
+            advertiser="TradingView",
+            text="Advanced technical analysis charts and stock screener.",
+            headline="Track All Markets",
+            landing_page="https://tradingview.com",
+            cta="Sign up"
+        )
+        assert res["relevance_category"] == "INDIRECT_COMPETITOR"
+        assert res["is_competitor"] is True
+
+    def test_broker_platform_classification(self):
+        res = AdsManagerAgent.classify_advertiser_relevance(
+            advertiser="Zerodha",
+            text="Invest in direct mutual funds and trade equities with zero brokerage.",
+            headline="Open a Demat Account",
+            landing_page="https://zerodha.com",
+            cta="Open Account"
+        )
+        assert res["relevance_category"] == "BROKER_OR_TRADING_PLATFORM"
+        assert res["is_competitor"] is False
+
+    def test_financial_platform_classification(self):
+        res = AdsManagerAgent.classify_advertiser_relevance(
+            advertiser="GCash",
+            text="Send money, pay bills, and buy stocks directly in the GCash app.",
+            headline="GStocks PH",
+            landing_page="https://gcash.com/services/gstocks-ph",
+            cta="Learn more"
+        )
+        assert res["relevance_category"] == "FINANCIAL_PLATFORM"
+        assert res["is_competitor"] is False
+
+    def test_financial_education_classification(self):
+        res = AdsManagerAgent.classify_advertiser_relevance(
+            advertiser="Pro Trader Academy",
+            text="Join our weekend masterclass course on price action trading.",
+            headline="Learn to Trade",
+            landing_page="https://example.com/course",
+            cta="Sign up"
+        )
+        assert res["relevance_category"] == "FINANCIAL_EDUCATION"
+        assert res["is_competitor"] is False
+
+    def test_historical_ad_active_status_enforced(self):
+        agent = AdsManagerAgent()
+        raw_ad = {
+            "adArchiveId": "999999999",
+            "pageName": "Old Campaign",
+            "isActive": False,
+            "endDateFormatted": "2026-01-01T00:00:00.000Z",
+            "snapshot": {"body": {"text": "Old ad copy"}, "title": "Old ad"}
+        }
+        normalized = agent.normalize_ad(raw_ad, "IN")
+        assert normalized["active_status"] == "inactive"
+        assert normalized["ad_classification"] == "HISTORICAL_META_AD"
+
+    def test_country_targeting_evidence_distinction(self):
+        agent = AdsManagerAgent()
+        explicit_ad = {
+            "adArchiveId": "111",
+            "pageName": "Targeted Brand",
+            "targetedOrReachedCountries": ["IN", "AE"],
+            "snapshot": {"body": {"text": "Trading app"}}
+        }
+        norm_exp = agent.normalize_ad(explicit_ad, "IN")
+        assert norm_exp["country_evidence_type"] == "explicit_meta_targeting"
+        assert "IN, AE" in norm_exp["country_evidence_details"]
+
+        inferred_ad = {
+            "adArchiveId": "222",
+            "pageName": "Global Brand",
+            "snapshot": {"body": {"text": "Trading app"}}
+        }
+        norm_inf = agent.normalize_ad(inferred_ad, "PH")
+        assert norm_inf["country_evidence_type"] == "query_country_filter"
+
+
+class TestEvidenceIntegrity:
+    """Tests audit evidence integrity, separating empirical statistics from AI hypotheses."""
+
+    def test_ofw_remittance_macro_statistic_is_verified_fact(self):
+        service = MarketResearchService()
+        benchmarks = service._get_verified_ground_truth_benchmarks("PH", "remittances")
+        bsp_claim = next(b for b in benchmarks if "BSP" in b.get("publisher", ""))
+        assert bsp_claim["is_verified_fact"] is True
+        assert bsp_claim["evidence_classification"] == "DIRECTLY_SUPPORTED"
+        assert "$37.2 billion" in bsp_claim["finding"]
+        assert "equities" not in bsp_claim["finding"]
+        assert "REITs" not in bsp_claim["finding"]
+
+    def test_ofw_reit_allocation_is_classified_as_ai_interpretation(self):
+        service = MarketResearchService()
+        benchmarks = service._get_verified_ground_truth_benchmarks("PH", "reits")
+        hyp_claim = next(b for b in benchmarks if "market hypothesis" in b.get("topic", ""))
+        assert hyp_claim["is_verified_fact"] is False
+        assert hyp_claim["evidence_classification"] == "AI_INTERPRETATION"
+        assert hyp_claim["confidence_score"] < 8.0

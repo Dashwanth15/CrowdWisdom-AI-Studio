@@ -109,3 +109,4 @@ Every research claim produced or displayed by CrowdWisdom AI Studio must fulfill
 1. **Canonical URL Deduplication**: URLs are normalized (stripping tracking parameters like `utm_source`, `fbclid`, and trailing slashes) to prevent duplicate articles from inflating confidence.
 2. **Syndication Independence**: Multiple news aggregators reprinting the exact same wire report (e.g., identical PTI or Reuters wire syndicated across 5 portals) are treated as **a single primary source**, not 5 independent confirmations.
 3. **Audience Persona Hypotheses**: Customer personas (e.g., `in_young_tech_investor` or `ph_ofw_wealth_builder`) are formally cataloged as *hypotheses* until substantiated by empirical demographic or trading account data.
+

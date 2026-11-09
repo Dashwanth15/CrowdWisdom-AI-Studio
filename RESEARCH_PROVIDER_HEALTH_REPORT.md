@@ -195,3 +195,4 @@ To ensure CrowdWisdom AI Studio never suffers pipeline interruptions due to thir
 }
 ```
 This endpoint powers the live status banner on the frontend Insights Page.
+

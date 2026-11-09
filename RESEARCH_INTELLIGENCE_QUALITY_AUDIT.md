@@ -280,7 +280,7 @@ Using our automated comparison pipeline (`scripts/run_market_comparison_research
   - SEC Philippines actively promotes verified investor education to accompany digital investing expansion (*The Manila Times*, November 2026).
   - PSE's one-share trading rule initiatives aim to lower minimum board lot entry barriers (*BusinessWorld Online*, January 2026).
 - **`ai_interpretation`:**
-  - CrowdWisdom's value proposition is **"Scam-Proof, Crowd-Validated Clarity"**: empowering retail investors to make informed moves in PSEi equities, REITs, and global tech with collective validation.
+  - CrowdWisdom's value proposition is **"Research-Backed Clarity for More Informed Investing"**: empowering retail investors to make informed moves in PSEi equities, REITs, and global tech with collective validation.
 - **Confidence:** `0.94`
 
 #### 5. Audience Objections

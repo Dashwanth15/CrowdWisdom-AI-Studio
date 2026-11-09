@@ -220,6 +220,11 @@ export interface Advertisement {
   data_source?: string
   ad_classification?: 'LIVE_META_AD' | 'HISTORICAL_META_AD' | 'CACHED_AD' | 'VERIFIED_DOMAIN_BENCHMARK' | 'AI_GENERATED_HYPOTHESIS'
   is_benchmark?: boolean
+  relevance_category?: 'DIRECT_COMPETITOR' | 'INDIRECT_COMPETITOR' | 'FINANCIAL_PLATFORM' | 'BROKER_OR_TRADING_PLATFORM' | 'FINANCIAL_EDUCATION' | 'UNRELATED_ADVERTISER' | 'UNKNOWN'
+  relevance_explanation?: string
+  is_competitor?: boolean
+  country_evidence_type?: string
+  country_evidence_details?: string
   country?: string
   advertiser: string
   headline?: string

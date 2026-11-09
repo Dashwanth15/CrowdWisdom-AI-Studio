@@ -78,3 +78,4 @@ To maintain strict regulatory compliance with SEBI and consumer protection laws:
 4. **Mandatory SEBI Disclaimer**:
    - Every video ad, script, and landing page targeting India MUST include:
    > *"Investment in securities market are subject to market risks. Read all scheme related documents carefully before investing. CrowdWisdom provides analytical market intelligence and consensus tools for educational purposes only and does not provide financial or trading advice."*
+

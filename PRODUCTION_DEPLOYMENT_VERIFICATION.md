@@ -122,3 +122,4 @@ To promote the local Research Intelligence 2.0 changes to production:
 - [x] Frontend production bundle compiles cleanly without warnings
 - [x] Research intelligence automated tests pass at 100% (50/50 tests)
 - [x] Multi-tier provider fallback prevents third-party downtime from impacting core features
+
