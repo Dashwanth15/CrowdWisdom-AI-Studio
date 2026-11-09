@@ -21,7 +21,8 @@ The platform is fully implemented, empirically tested, and deployed live to prod
 - **GitHub Repository**: [https://github.com/Dashwanth15/CrowdWisdom-AI-Studio](https://github.com/Dashwanth15/CrowdWisdom-AI-Studio)
 - **Live Production Platform**: [https://crowdwisdom-ai-studio-ads.onrender.com](https://crowdwisdom-ai-studio-ads.onrender.com/)
 - **Live Interactive API Docs (Swagger)**: [https://crowdwisdom-ai-studio-backend.onrender.com/docs](https://crowdwisdom-ai-studio-backend.onrender.com/docs)
-- **Final Rendered Advertisement Video**: [Direct MP4 Commercial Link](https://crowdwisdom-ai-studio-backend.onrender.com/media/videos/stage4_verified_advertisement.mp4)
+- **Flagship 60s Rendered Commercial**: [Watch 60s MP4 Commercial](https://crowdwisdom-ai-studio-backend.onrender.com/media/videos/video_6af1415f285ae7a28dd78ed5.mp4)
+- **Production 45s Rendered Commercial**: [Watch 45s MP4 Commercial](https://crowdwisdom-ai-studio-backend.onrender.com/media/videos/video_6af1566ec07fce8e62c4344e.mp4)
 - **Hermes Task Kanban & Interactive Workflow**: [Live Kanban Board](https://crowdwisdom-ai-studio-ads.onrender.com/workflow)
 
 *Default Login Credentials for Live Evaluation:*
@@ -74,3 +75,4 @@ Thank you for the opportunity to work on this challenge. I look forward to your 
 Sincerely,  
 **Dashwanth**  
 *Full-Stack AI Software Engineer*
+

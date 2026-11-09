@@ -119,3 +119,4 @@ This guide provides a structured, 9-step demonstration sequence to evaluate the 
    - Verify the crisp 1080x1920 9:16 vertical orientation.
    - Test seeking forward and backward (supported via HTTP 206 Partial Content range requests).
 3. Click **"Download MP4 Commercial"** to download the completed commercial file directly to your workstation.
+

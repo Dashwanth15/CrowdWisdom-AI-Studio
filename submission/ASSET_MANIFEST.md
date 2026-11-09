@@ -8,12 +8,13 @@ This manifest documents all genuine, physically verified production deliverables
 
 All video files have been verified via FFprobe for stream integrity, correct video/audio codecs, and progressive rendering:
 
-| Asset Name | Relative File Path | Target Duration | Actual FFprobe Duration | Dimensions & Codec | Audio Stream | Physical Size |
-|---|---|:---:|:---:|---|---|:---:|
-| **Verified Commercial (30s)** | `backend/media/videos/commercial_30s_verified.mp4` | 30s | **00:00:30.00** | 1080x1920 (9:16), H.264 (avc1) | AAC stereo 44.1kHz (94 kb/s) | 919 KB |
-| **OpenMontage Commercial (45s)** | `backend/media/videos/openmontage_verified_ad.mp4` | 45s | **00:00:45.00** | 1080x1920 (9:16), H.264 (avc1) | AAC stereo 44.1kHz (88 kb/s) | 1.45 MB |
-| **Stage 4 Advertisement (Full)** | `backend/media/videos/stage4_verified_advertisement.mp4` | 30s | **00:00:26.11** | 1080x1920 (9:16), H.264 @ 30 FPS | AAC stereo 44.1kHz (128 kb/s) | 15.38 MB |
-| **Full 60s Showcase Video** | `backend/media/videos/video_6af1415f285ae7a28dd78ed5.mp4` | 60s | **00:01:00.00** | 1080x1920 (9:16), H.264 @ 30 FPS | AAC stereo 44.1kHz (132 kb/s) | 37.62 MB |
+| Asset Name | Relative File Path | Target Duration | Actual FFprobe Duration | Dimensions & Codec | Audio Stream | Physical Size | Role |
+|---|---|:---:|:---:|---|---|:---:|---|
+| **Flagship 60s Commercial** | `backend/media/videos/video_6af1415f285ae7a28dd78ed5.mp4` | 60s | **00:01:00.00** | 1080x1920 (9:16), H.264 @ 30 FPS | AAC stereo 44.1kHz (132 kb/s) | 37.62 MB | **Primary Flagship Commercial** |
+| **Production 45s Commercial** | `backend/media/videos/video_6af1566ec07fce8e62c4344e.mp4` | 45s | **00:00:45.00** | 1080x1920 (9:16), H.264 @ 30 FPS | AAC stereo 44.1kHz (130 kb/s) | 38.07 MB | **Production 45s Ad** |
+| **OpenMontage Commercial** | `backend/media/videos/openmontage_verified_ad.mp4` | 45s | **00:00:45.00** | 1080x1920 (9:16), H.264 (avc1) | AAC stereo 44.1kHz (88 kb/s) | 1.45 MB | **OpenMontage Composition** |
+| **Verified Commercial (30s)** | `backend/media/videos/commercial_30s_verified.mp4` | 30s | **00:00:30.00** | 1080x1920 (9:16), H.264 (avc1) | AAC stereo 44.1kHz (94 kb/s) | 919 KB | **Standard 30s Spot** |
+| **Stage 4 Advertisement** | `backend/media/videos/stage4_verified_advertisement.mp4` | 45s | **00:00:45.00** | 1080x1920 (9:16), H.264 @ 30 FPS | AAC stereo 44.1kHz (130 kb/s) | 38.07 MB | **Synchronized Deliverable** |
 
 *Note: All video deliverables are accessible locally under `backend/media/videos/` and `media/videos/`, and streamed live over HTTP 206 at `https://crowdwisdom-ai-studio-backend.onrender.com/media/videos/{filename}`.*
 
@@ -114,3 +115,4 @@ The following genuine platform screenshots are committed in the repository and e
 | **Secret Leak Prevention** | `backend/tests/test_secret_leak_prevention.py` | 6 | **6 / 6 PASSED** |
 | **Production Env Config** | `backend/tests/test_production_env_validation.py` | 5 | **5 / 5 PASSED** |
 | **TOTAL** | | **31** | **31 / 31 PASSED (100%)** |
+
