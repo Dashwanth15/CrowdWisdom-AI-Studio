@@ -10,17 +10,15 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Cpu,
-  Clapperboard,
+  Play,
+  Film,
   TrendingUp,
-  Activity,
-  Globe,
-  Loader2,
+  Sliders,
   CheckCircle2,
+  Volume2,
+  Loader2,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
-import { CrowdWisdomLogo } from '@/components/branding'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,14 +28,14 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
   const { login, register, isLoading } = useAuthStore()
 
-  // Tab State
+  // Tab State: 'login' | 'register'
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
 
   // Password Visibility Toggles
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [showRegPassword, setShowRegPassword] = useState(false)
 
-  // Login Form States (pre-filled with demo credentials as per project architecture)
+  // Login Form States (pre-filled with canonical demo credentials)
   const [loginEmail, setLoginEmail] = useState('admin@crowdwisdom.ai')
   const [loginPassword, setLoginPassword] = useState('admin123')
 
@@ -47,7 +45,7 @@ export const LoginPage: React.FC = () => {
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
 
-  // Handle Login Submission
+  // Handle Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -59,7 +57,7 @@ export const LoginPage: React.FC = () => {
     }
   }
 
-  // Handle Registration Submission
+  // Handle Register
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -76,179 +74,195 @@ export const LoginPage: React.FC = () => {
     }
   }
 
-  // Handle Demo Fill Action
+  // Handle Demo Fill
   const handleFillDemo = () => {
     setLoginEmail('admin@crowdwisdom.ai')
     setLoginPassword('admin123')
     toast.success('Demo credentials loaded (admin@crowdwisdom.ai)')
   }
 
-  // Capability Highlights
-  const capabilities = [
-    {
-      icon: Cpu,
-      title: 'Autonomous AI Agents',
-      description: 'Hermes multi-agent swarm orchestrating ad research, hook synthesis, and pipeline automation.',
-      badge: 'Hermes Swarm',
-      badgeColor: 'text-[#38BDF8] border-[#38BDF8]/30 bg-[#38BDF8]/10',
-      iconColor: 'text-[#38BDF8]',
-      iconBg: 'bg-[#38BDF8]/10 border-[#38BDF8]/20',
-    },
-    {
-      icon: Sparkles,
-      title: 'Creative Intelligence',
-      description: 'Dynamic consumer sentiment analysis across Meta, TikTok, and Google to generate winning hooks.',
-      badge: 'Real-Time Insights',
-      badgeColor: 'text-[#C5A46D] border-[#C5A46D]/30 bg-[#C5A46D]/10',
-      iconColor: 'text-[#C5A46D]',
-      iconBg: 'bg-[#C5A46D]/10 border-[#C5A46D]/20',
-    },
-    {
-      icon: Clapperboard,
-      title: 'Cinematic Video Production',
-      description: 'OpenMontage neural engine generating broadcast-grade 4K 60fps video with AI voice synthesis.',
-      badge: '4K HDR Engine',
-      badgeColor: 'text-[#818CF8] border-[#818CF8]/30 bg-[#818CF8]/10',
-      iconColor: 'text-[#818CF8]',
-      iconBg: 'bg-[#818CF8]/10 border-[#818CF8]/20',
-    },
-    {
-      icon: TrendingUp,
-      title: 'Campaign Analytics',
-      description: 'Unified cross-channel performance telemetry, conversion prediction, and automated iterations.',
-      badge: 'Market Telemetry',
-      badgeColor: 'text-[#34D399] border-[#34D399]/30 bg-[#34D399]/10',
-      iconColor: 'text-[#34D399]',
-      iconBg: 'bg-[#34D399]/10 border-[#34D399]/20',
-    },
-  ]
-
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#080B12] text-[#F2F3F5] relative overflow-hidden font-sans selection:bg-[#38BDF8]/30 selection:text-[#F2F3F5]">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#080B12] text-[#F2F3F5] relative overflow-hidden font-sans selection:bg-[#38BDF8]/20 selection:text-[#F8FAFC]">
       {/* ========================================================================= */}
-      {/* LEFT SECTION — Brand Experience, Intelligence Network & Capabilities      */}
+      {/* LEFT SECTION — Premium Editorial Product Experience                       */}
       {/* ========================================================================= */}
-      <div className="w-full lg:w-[58%] xl:w-[60%] flex flex-col justify-between p-6 sm:p-10 lg:p-14 xl:p-16 relative overflow-hidden bg-gradient-to-br from-[#06080D] via-[#090D15] to-[#0E1522] border-b lg:border-b-0 lg:border-r border-[#1F2937]/60">
-        {/* Subtle Ambient Radial Lighting */}
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#38BDF8]/10 blur-[130px] rounded-full pointer-events-none" />
-        <div className="absolute top-1/2 -right-20 w-80 h-80 bg-[#6366F1]/10 blur-[140px] rounded-full pointer-events-none" />
-        <div className="absolute -bottom-24 left-1/3 w-96 h-96 bg-[#C5A46D]/10 blur-[150px] rounded-full pointer-events-none" />
+      <div className="w-full lg:w-[58%] xl:w-[60%] flex flex-col justify-between p-6 sm:p-10 lg:p-12 xl:p-16 relative overflow-hidden bg-[#080B12] border-b lg:border-b-0 lg:border-r border-[#1B2230]">
+        {/* Subtle, Restrained Atmospheric Lighting (Linear/Apple Style) */}
+        <div className="absolute -top-40 -left-40 w-[550px] h-[550px] bg-gradient-to-br from-[#1E293B]/20 via-[#0EA5E9]/5 to-transparent blur-[140px] pointer-events-none" />
+        <div className="absolute -bottom-40 right-10 w-[500px] h-[500px] bg-gradient-to-tl from-[#1E293B]/25 via-[#C5A46D]/5 to-transparent blur-[150px] pointer-events-none" />
 
-        {/* Subtle Engineering Dot Grid Overlay */}
-        <div className="absolute inset-0 bg-dot-grid opacity-35 pointer-events-none mask-radial-faded" />
-
-        {/* Top Brand Bar */}
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        {/* ----------------------------------------------------------------------- */}
+        {/* TOP BRAND HEADER                                                        */}
+        {/* ----------------------------------------------------------------------- */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
             {/* Official Bears & Bulls Logo Badge Container */}
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#38BDF8]/40 via-[#547DB8]/30 to-[#C5A46D]/40 rounded-xl blur-md opacity-60 group-hover:opacity-100 transition duration-300" />
-              <div className="relative h-11 w-20 rounded-lg bg-white p-1 border border-[#38BDF8]/50 shadow-lg flex items-center justify-center overflow-hidden">
-                <img
-                  src="/crowdwisdom_logo_badge.png"
-                  alt="CrowdWisdom Official Brand Symbol"
-                  className="h-full w-full object-contain select-none"
-                  loading="eager"
-                />
-              </div>
+            <div className="relative h-10 w-16 sm:h-11 sm:w-18 rounded-lg bg-white p-1 border border-[#38BDF8]/30 shadow-md flex items-center justify-center overflow-hidden flex-shrink-0">
+              <img
+                src="/crowdwisdom_logo_badge.png"
+                alt="CrowdWisdom Official Brand Symbol"
+                className="h-full w-full object-contain select-none"
+                loading="eager"
+              />
             </div>
-
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg font-bold tracking-tight text-[#F2F3F5] uppercase">
+                <span className="text-base font-bold tracking-tight text-[#F8FAFC] uppercase">
                   CrowdWisdom
                 </span>
-                <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[#C5A46D]/15 text-[#C5A46D] border border-[#C5A46D]/35 tracking-wider">
+                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[#C5A46D]/15 text-[#C5A46D] border border-[#C5A46D]/30 tracking-wider">
                   PRO STUDIO
                 </span>
               </div>
-              <p className="text-[11px] font-mono text-[#8E9EB5] tracking-wide">
+              <p className="text-[11px] font-mono text-[#788599] tracking-wide">
                 AI MARKETING INTELLIGENCE PLATFORM
               </p>
             </div>
           </div>
 
-          {/* Real-time System Operational Pill */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#10141C]/80 border border-[#232B38] text-[11px] font-mono text-[#A0A7B2] backdrop-blur-sm shadow-sm w-fit">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34D399] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#34D399]" />
-            </span>
-            <span className="text-[#34D399] font-medium">SYSTEM OPERATIONAL</span>
-            <span className="text-[#3A4556]">•</span>
-            <span>v2.5 PRO</span>
+          <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-[#6E7D93]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#34D399]" />
+            <span>Autonomous Pipeline Active</span>
           </div>
         </div>
 
-        {/* Middle Hero Presentation */}
-        <div className="relative z-10 my-10 sm:my-12 lg:my-14 space-y-8 max-w-2xl">
-          {/* Eyebrow Pill */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#161D29]/80 border border-[#283548] text-xs font-mono text-[#38BDF8] shadow-sm">
-            <Sparkles className="h-3.5 w-3.5 text-[#38BDF8]" />
-            <span>Autonomous Cinematic Marketing Architecture</span>
-          </div>
-
-          {/* Primary Headline */}
+        {/* ----------------------------------------------------------------------- */}
+        {/* HERO STORYTELLING & EDITORIAL HEADLINE                                  */}
+        {/* ----------------------------------------------------------------------- */}
+        <div className="relative z-10 my-8 sm:my-10 space-y-6 max-w-2xl">
           <div className="space-y-3">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#F2F3F5] leading-[1.12]">
-              Intelligence That Turns{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#60A5FA] via-[#38BDF8] to-[#C5A46D]">
-                Creativity Into Impact.
+            <h1 className="text-3xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] text-[#F8FAFC] leading-[1.12]">
+              From Marketing Intelligence <br className="hidden sm:inline" />
+              <span className="text-[#94A3B8] font-normal">to </span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F8FAFC] via-[#CBD5E1] to-[#38BDF8]">
+                Cinematic Impact.
               </span>
             </h1>
-            <p className="text-sm sm:text-base text-[#94A3B8] leading-relaxed max-w-xl">
-              An autonomous AI marketing intelligence platform engineered to research, strategize,
-              create and produce cinematic advertising experiences at scale.
+            <p className="text-sm sm:text-[15px] text-[#8E9BAE] leading-relaxed max-w-xl font-normal">
+              Research markets. Discover opportunities. Create compelling campaigns. Produce
+              cinematic advertisements — all through one intelligent AI-powered platform.
             </p>
           </div>
 
-          {/* Capability Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
-            {capabilities.map((cap) => {
-              const Icon = cap.icon
-              return (
-                <div
-                  key={cap.title}
-                  className="group relative p-4 rounded-xl bg-[#10141C]/80 border border-[#1F2937]/80 hover:border-[#38BDF8]/40 transition-all duration-300 backdrop-blur-md shadow-sm hover:shadow-[0_4px_20px_-4px_rgba(56,189,248,0.15)] hover:-translate-y-0.5"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2.5">
-                    <div className={`p-2 rounded-lg border ${cap.iconBg}`}>
-                      <Icon className={`h-4 w-4 ${cap.iconColor}`} />
-                    </div>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${cap.badgeColor}`}>
-                      {cap.badge}
+          {/* --------------------------------------------------------------------- */}
+          {/* THE CENTERPIECE: Editorial Campaign & Cinematic Production Canvas     */}
+          {/* --------------------------------------------------------------------- */}
+          <div className="relative rounded-2xl bg-[#0D121B] border border-[#1E2636] shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+            {/* Top Stage Progression Ribbon */}
+            <div className="px-4 py-2.5 bg-[#0A0E15] border-b border-[#1A2230] flex items-center justify-between text-[11px] font-mono text-[#717E91]">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-[#34D399]" />
+                <span className="text-[#CBD5E1] font-semibold">STAGE 03</span>
+                <span className="text-[#475569]">/</span>
+                <span className="text-[#94A3B8]">AI CINEMATIC PRODUCTION</span>
+              </div>
+              <div className="flex items-center gap-3 text-[10px]">
+                <span className="text-[#64748B]">Resolution: <strong className="text-[#E2E8F0] font-mono">4K UHD</strong></span>
+                <span className="text-[#475569]">•</span>
+                <span className="text-[#64748B]">Framerate: <strong className="text-[#E2E8F0] font-mono">60 FPS</strong></span>
+              </div>
+            </div>
+
+            {/* Video Viewport Showcase Frame */}
+            <div className="relative aspect-[16/9] w-full overflow-hidden bg-black group">
+              {/* Primary Cinematic Creative Preview Image */}
+              <img
+                src="/showcase/cinematic_ad_preview.jpg"
+                alt="CrowdWisdom Cinematic Advertisement Master"
+                className="w-full h-full object-cover object-center select-none transition-transform duration-700 group-hover:scale-[1.02]"
+                loading="eager"
+                onError={(e) => {
+                  // Fallback to platform preview if thumb is unavailable
+                  ;(e.target as HTMLImageElement).src = '/showcase/platform_preview.jpg'
+                }}
+              />
+
+              {/* Cinematic Vignette Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0D14] via-transparent to-black/40 pointer-events-none" />
+
+              {/* Floating Top In-Video Telemetry Overlay */}
+              <div className="absolute top-3 left-3 right-3 flex items-center justify-between text-xs pointer-events-none">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md border border-white/10 text-[10px] font-mono text-white/90 shadow-sm">
+                  <Film className="h-3 w-3 text-[#38BDF8]" />
+                  <span>Scene 02: "The Sentiment Divergence"</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#C5A46D]/20 backdrop-blur-md border border-[#C5A46D]/40 text-[9px] font-mono text-[#C5A46D] font-semibold uppercase">
+                  Broadcast Mastered
+                </div>
+              </div>
+
+              {/* Center Play Indicator */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110">
+                  <Play className="h-5 w-5 text-white fill-white ml-0.5" />
+                </div>
+              </div>
+
+              {/* Bottom Scrubber Timeline Strip Overlay */}
+              <div className="absolute bottom-0 inset-x-0 p-3 pt-6 bg-gradient-to-t from-[#0A0E17] via-[#0A0E17]/90 to-transparent space-y-2">
+                {/* Scene Timeline Blocks */}
+                <div className="grid grid-cols-4 gap-1 text-[9px] font-mono">
+                  <div className="py-1 px-1.5 rounded bg-white/10 border border-white/10 text-[#94A3B8] truncate">
+                    01 Hook (0-5s)
+                  </div>
+                  <div className="py-1 px-1.5 rounded bg-[#38BDF8]/20 border border-[#38BDF8]/40 text-[#38BDF8] font-semibold truncate">
+                    02 Sentiment (5-14s)
+                  </div>
+                  <div className="py-1 px-1.5 rounded bg-white/5 border border-white/5 text-[#64748B] truncate">
+                    03 Edge (14-23s)
+                  </div>
+                  <div className="py-1 px-1.5 rounded bg-white/5 border border-white/5 text-[#64748B] truncate">
+                    04 CTA (23-30s)
+                  </div>
+                </div>
+
+                {/* Scrubber Progress Bar */}
+                <div className="space-y-1">
+                  <div className="relative h-1 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-[#38BDF8] to-[#60A5FA] w-[46%]" />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] font-mono text-[#717E91]">
+                    <span className="text-[#CBD5E1]">00:14.28 / 00:30.00</span>
+                    <span className="flex items-center gap-1 text-[#94A3B8]">
+                      <Volume2 className="h-3 w-3 text-[#38BDF8]" />
+                      <span>Neural Voice & Score Synthesized</span>
                     </span>
                   </div>
-                  <h3 className="text-xs font-semibold text-[#F2F3F5] mb-1 group-hover:text-[#38BDF8] transition-colors">
-                    {cap.title}
-                  </h3>
-                  <p className="text-[11px] text-[#788292] leading-relaxed">
-                    {cap.description}
-                  </p>
                 </div>
-              )
-            })}
+              </div>
+            </div>
+
+            {/* Bottom Artifact Metadata Bar */}
+            <div className="p-3.5 bg-[#0C1017] border-t border-[#1A2230] grid grid-cols-3 gap-3 text-xs">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-mono text-[#64748B] uppercase">Market Source</span>
+                <p className="text-[11px] font-semibold text-[#E2E8F0] truncate">Meta & Google Ad Intel</p>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-mono text-[#64748B] uppercase">Creative Engine</span>
+                <p className="text-[11px] font-semibold text-[#38BDF8] truncate">Hermes Multi-Agent</p>
+              </div>
+              <div className="space-y-0.5 text-right">
+                <span className="text-[10px] font-mono text-[#64748B] uppercase">Render Pipeline</span>
+                <p className="text-[11px] font-semibold text-[#C5A46D] truncate">OpenMontage v2</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Bottom Trust & Compliance Strip */}
-        <div className="relative z-10 pt-6 border-t border-[#1F2937]/60 flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-[#788292]">
+        {/* ----------------------------------------------------------------------- */}
+        {/* REFINED EDITORIAL TRUST STRIP                                           */}
+        {/* ----------------------------------------------------------------------- */}
+        <div className="relative z-10 pt-4 border-t border-[#1A2230] flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-[#64748B]">
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-            <span className="flex items-center gap-1.5 text-[#A0A7B2]">
-              <ShieldCheck className="h-4 w-4 text-[#34D399]" />
-              <span>SOC2 Type II Ready</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-[#A0A7B2]">
-              <Lock className="h-4 w-4 text-[#38BDF8]" />
-              <span>End-to-End Cryptographic Secret Vault</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-[#A0A7B2]">
-              <Globe className="h-4 w-4 text-[#C5A46D]" />
-              <span>Global CDN Edge Acceleration</span>
-            </span>
+            <span className="text-[#8E9BAE]">Enterprise Multi-Agent Architecture</span>
+            <span className="text-[#334155]">•</span>
+            <span className="text-[#8E9BAE]">Broadcast-Grade 4K Neural Video</span>
+            <span className="text-[#334155]">•</span>
+            <span className="text-[#8E9BAE]">Real-Time Market Sentiment</span>
           </div>
 
-          <span className="text-[11px] text-[#556070]">
+          <span className="text-[11px] text-[#475569]">
             CrowdWisdomTrading.com
           </span>
         </div>
@@ -257,7 +271,7 @@ export const LoginPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* RIGHT SECTION — Authentication Command Panel (Sign In & Register)         */}
       {/* ========================================================================= */}
-      <div className="w-full lg:w-[42%] xl:w-[40%] flex items-center justify-center p-6 sm:p-10 lg:p-12 relative bg-[#090C13] border-t lg:border-t-0 lg:border-l border-[#1F2937]/70">
+      <div className="w-full lg:w-[42%] xl:w-[40%] flex items-center justify-center p-6 sm:p-10 lg:p-12 relative bg-[#090C13] border-t lg:border-t-0 lg:border-l border-[#1B2230]">
         {/* Subtle Ambient Glow */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#2563EB]/8 blur-[120px] rounded-full pointer-events-none" />
 
