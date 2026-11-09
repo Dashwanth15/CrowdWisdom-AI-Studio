@@ -2,6 +2,11 @@
 
 **Autonomous AI Marketing Agent & Cinematic Video Advertising Platform**
 
+> 🚀 **Live Production Platform:** **[https://crowdwisdom-ai-studio-ads.onrender.com](https://crowdwisdom-ai-studio-ads.onrender.com/)**  
+> *Experience the autonomous multi-agent marketing & cinematic video advertising studio live in your browser.*
+
+[![Live Platform](https://img.shields.io/badge/🚀_Live_Studio-Access_Platform-00C853?style=for-the-badge&logo=render&logoColor=white)](https://crowdwisdom-ai-studio-ads.onrender.com/)
+
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB.svg?style=flat&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6.svg?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -494,6 +499,7 @@ The project is structured for zero-downtime deployment on modern cloud platforms
 - **Environment Variables**: Set `APP_ENV=production`, `APP_SECRET_KEY`, `JWT_SECRET_KEY`, and `MONGODB_URL`.
 
 ### 2. Frontend Static Site (Render)
+- **Live URL**: [https://crowdwisdom-ai-studio-ads.onrender.com](https://crowdwisdom-ai-studio-ads.onrender.com/)
 - **Runtime**: Static Site
 - **Root Directory**: `frontend`
 - **Build Command**: `pnpm build`
