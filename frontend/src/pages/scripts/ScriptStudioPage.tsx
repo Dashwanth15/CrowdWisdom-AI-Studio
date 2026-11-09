@@ -585,14 +585,28 @@ export const ScriptStudioPage: React.FC = () => {
                           </div>
 
                           <div className="flex flex-col sm:flex-row gap-3 text-[11px]">
-                            {/* Scene Visual Preview Image */}
+                            {/* Scene Visual Preview Image / Video */}
                             {scene.visual_asset_url ? (
                               <div className="relative w-full sm:w-40 h-28 rounded-lg overflow-hidden border border-[#292E37] bg-[#080A0F] shrink-0 group">
-                                <img
-                                  src={resolveMediaUrl(scene.visual_asset_url)}
-                                  alt={`Scene ${scene.scene_number}`}
-                                  className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
-                                />
+                                {scene.visual_asset_url.endsWith('.mp4') || (scene as any).media_type === 'video_clip' ? (
+                                  <video
+                                    src={resolveMediaUrl(scene.visual_asset_url)}
+                                    muted
+                                    loop
+                                    autoPlay
+                                    playsInline
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <img
+                                    src={resolveMediaUrl(scene.visual_asset_url)}
+                                    alt={`Scene ${scene.scene_number}`}
+                                    className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+                                    onError={(e) => {
+                                      ;(e.target as HTMLImageElement).src = '/showcase/cinematic_ad_preview.jpg'
+                                    }}
+                                  />
+                                )}
                                 <div className="absolute top-1 left-1">
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-semibold bg-[#36B58F] text-[#080A0F] shadow">
                                     FLUX 9:16

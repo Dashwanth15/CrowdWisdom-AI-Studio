@@ -142,6 +142,12 @@ async def serve_video(filename: str, request: Request):
         pathlib.Path(settings.MEDIA_DIR) / "videos" / clean_filename,
         pathlib.Path(settings.MEDIA_DIR).resolve() / "videos" / clean_filename,
         backend_root / "media" / "videos" / clean_filename,
+        project_root / "media" / "assets" / "stock_footage" / clean_filename,
+        pathlib.Path(settings.MEDIA_DIR) / "assets" / "stock_footage" / clean_filename,
+        backend_root / "media" / "assets" / "stock_footage" / clean_filename,
+        project_root / "media" / "assets" / clean_filename,
+        pathlib.Path(settings.MEDIA_DIR) / "assets" / clean_filename,
+        backend_root / "media" / "assets" / clean_filename,
         pathlib.Path.cwd() / "media" / "videos" / clean_filename,
         pathlib.Path.cwd() / "backend" / "media" / "videos" / clean_filename,
     ]

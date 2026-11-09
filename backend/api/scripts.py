@@ -73,10 +73,15 @@ def _serialize_script(doc: dict) -> ScriptOut:
     else:
         target_audience_val = None
 
+    raw_approach = doc.get("approach", "pain_point")
+    from models.schemas import ScriptApproach
+    valid_approaches = {a.value for a in ScriptApproach}
+    approach_val = raw_approach if raw_approach in valid_approaches else ScriptApproach.PAIN_POINT.value
+
     return ScriptOut(
         id=str(doc["_id"]),
         campaign_id=doc.get("campaign_id", ""),
-        approach=doc.get("approach", "pain_point"),
+        approach=approach_val,
         status=status_val,
         version=doc.get("version", 1),
         title=title,
@@ -314,10 +319,13 @@ async def approve_script(
 
     if missing_assets or has_duplicate_assets:
         logger.info(f"[ScriptApproval] Refreshing visual assets (missing={missing_assets}, duplicate={has_duplicate_assets}) for script {script_id}...")
-        updated_scenes = await visual_asset_service.ensure_script_visual_assets(doc, db=db, force_refresh=has_duplicate_assets)
-        doc["scenes"] = updated_scenes
+        try:
+            updated_scenes = await visual_asset_service.ensure_script_visual_assets(doc, db=db, force_refresh=has_duplicate_assets)
+            doc["scenes"] = updated_scenes
+        except Exception as e:
+            logger.error(f"[ScriptApproval] ensure_script_visual_assets error: {e}", exc_info=True)
 
-    # Strict Validation Gate: Reject approval if any scene lacks a valid, resolvable asset
+    # Strict Validation Gate: Self-heal if any scene lacks a valid, resolvable asset
     failed_scenes = []
     for sc in doc.get("scenes", []):
         s_num = sc.get("scene_number", "?")
@@ -327,7 +335,19 @@ async def approve_script(
         p = sc.get("visual_asset_path")
         resolved = _resolve_scene_asset(p)
         if not resolved or sc.get("visual_asset_status") == "failed":
-            failed_scenes.append(s_num)
+            # Auto-recover with verified fallback asset before failing
+            try:
+                rec = visual_asset_service._emergency_recover_scene_asset(sc, script_id, "9:16", campaign_id=doc.get("campaign_id"))
+                resolved = _resolve_scene_asset(rec.get("visual_asset_path"))
+                if resolved:
+                    sc["visual_asset_path"] = str(resolved)
+                    sc["visual_asset_url"] = rec.get("visual_asset_url")
+                    sc["visual_asset_status"] = "completed"
+                else:
+                    failed_scenes.append(s_num)
+            except Exception as rec_err:
+                logger.error(f"[ScriptApproval] Emergency recovery notice for Scene {s_num}: {rec_err}")
+                failed_scenes.append(s_num)
         elif resolved:
             sc["visual_asset_path"] = str(resolved)
 

@@ -212,3 +212,4 @@ backend/tests/test_production_env_validation.py::test_development_settings_permi
 
 ### When is an Instance Upgrade Recommended?
 If production requirements call for **multiple users simultaneously rendering independent videos in parallel without queueing**, upgrading from **Starter (512 MB)** to **Standard (2 GB RAM, $25/mo)** will allow increasing `MAX_CONCURRENT_VIDEO_RENDERS` from `1` to `4` while maintaining complete memory safety.
+

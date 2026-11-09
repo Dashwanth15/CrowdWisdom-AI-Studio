@@ -130,23 +130,27 @@ export function resolveMediaUrl(url: string | undefined | null): string {
   // Standardize backslashes from Windows paths and trim whitespace
   const cleanUrl = url.replace(/\\/g, '/').trim()
   const prefix = getMediaHostPrefix()
+  const filename = cleanUrl.split('/').pop() || cleanUrl
 
   let path = ''
-  // 1. If URL already has full media path, preserve exactly as specified
-  if (cleanUrl.startsWith('/media/') || cleanUrl.startsWith('media/')) {
+  // 1. Stock footage MP4s always route to stock_footage directory
+  if (
+    filename.endsWith('.mp4') &&
+    (filename.includes('typing') ||
+      filename.includes('timelapse') ||
+      filename.includes('highrise') ||
+      filename.includes('downtown') ||
+      filename.startsWith('stock_'))
+  ) {
+    path = `/media/assets/stock_footage/${filename}`
+  } else if (cleanUrl.startsWith('/media/') || cleanUrl.startsWith('media/')) {
     path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`
   } else if (cleanUrl.includes('asset_')) {
-    // 2. Handle asset_ prefix
-    const filename = cleanUrl.split('/').pop()
     path = `/media/assets/${filename}`
   } else if (cleanUrl.endsWith('.mp4')) {
-    // 3. Handle stock footage or rendered videos
-    const filename = cleanUrl.split('/').pop() || cleanUrl
-    if (filename.includes('typing') || filename.includes('timelapse') || filename.includes('highrise') || filename.includes('downtown')) {
-      path = `/media/assets/stock_footage/${filename}`
-    } else {
-      path = `/media/videos/${filename}`
-    }
+    path = `/media/videos/${filename}`
+  } else if (cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.png')) {
+    path = `/media/assets/${filename}`
   } else {
     path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`
   }
