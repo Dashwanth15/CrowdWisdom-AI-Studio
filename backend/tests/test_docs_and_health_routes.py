@@ -74,3 +74,4 @@ def test_health_endpoints(client):
         # Ensure no secrets or connection strings are leaked
         assert "password" not in str(data).lower()
         assert "mongodb://" not in str(data)
+
