@@ -71,6 +71,7 @@ export const CampaignDetailPage: React.FC = () => {
   const [isApprovingBrief, setIsApprovingBrief] = useState(false)
   const [isDispatchingVideoId, setIsDispatchingVideoId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string>('scripts')
+  const [videoPlaybackErrors, setVideoPlaybackErrors] = useState<Record<string, boolean>>({})
 
   // Deduplicate scripts by approach: show only the single active/approved script per approach
   // Prioritizes approved scripts first, then latest generated scripts to prevent duplicate pending approvals
@@ -1022,34 +1023,44 @@ export const CampaignDetailPage: React.FC = () => {
                   <Card key={vid.id} className="border-border/60 overflow-hidden flex flex-col justify-between">
                     <div className="bg-[#060911] w-full flex items-center justify-center p-3 relative">
                       <div className="aspect-[9/16] w-full max-w-[280px] sm:max-w-[320px] max-h-[560px] flex items-center justify-center relative rounded-xl overflow-hidden bg-black shadow-2xl border border-border/40">
-                        {vid.video_url ? (
+                        {vid.video_url && !videoPlaybackErrors[vid.id] ? (
                           <video
-                            key={vid.id}
+                            key={vid.video_url}
+                            src={resolveMediaUrl(vid.video_url)}
                             controls
                             playsInline
                             preload="metadata"
+                            crossOrigin="anonymous"
                             className="h-full w-full object-contain"
+                            onError={() => {
+                              setVideoPlaybackErrors((prev) => ({ ...prev, [vid.id]: true }))
+                            }}
                           >
                             <source src={resolveMediaUrl(vid.video_url)} type="video/mp4" />
                             Your browser does not support HTML5 MP4 video.
                           </video>
-                        ) : vid.status === 'failed' ? (
+                        ) : (vid.status === 'failed' || videoPlaybackErrors[vid.id]) ? (
                           <div className="text-center p-6 space-y-2">
                             <AlertTriangle className="h-8 w-8 text-rose-400 mx-auto opacity-70" />
                             <p className="text-xs text-rose-300 font-medium">
-                              Render Interrupted ({vid.progress_percent}%)
+                              {videoPlaybackErrors[vid.id] ? 'Video Unavailable on Host' : `Render Interrupted (${vid.progress_percent}%)`}
                             </p>
                             <p className="text-[10px] text-muted-foreground px-4">
-                              {vid.error_message || 'Video rendering job stopped.'}
+                              {videoPlaybackErrors[vid.id]
+                                ? 'The MP4 file is not accessible on the server (container storage may have reset or expired).'
+                                : (vid.error_message || 'Video rendering job stopped.')}
                             </p>
                             {vid.script_id && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-xs h-7 mt-2 border-rose-500/30 hover:bg-rose-500/10 text-rose-200"
-                                onClick={() => handleRenderVideo(vid.script_id!)}
+                                className="text-xs h-7 mt-2 border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-300"
+                                onClick={() => {
+                                  setVideoPlaybackErrors((prev) => ({ ...prev, [vid.id]: false }))
+                                  handleRenderVideo(vid.script_id!)
+                                }}
                               >
-                                <RefreshCw className="h-3 w-3 mr-1" /> Retry Render
+                                <RefreshCw className="h-3 w-3 mr-1" /> Re-render Commercial
                               </Button>
                             )}
                           </div>
@@ -1087,13 +1098,25 @@ export const CampaignDetailPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 mt-2">
-                        {vid.video_url && (
+                        {vid.video_url && !videoPlaybackErrors[vid.id] ? (
                           <a href={resolveMediaUrl(vid.video_url)} download={`crowdwisdom_${vid.id}.mp4`} className="flex-1">
                             <Button variant="brand" size="sm" className="w-full text-xs bg-[#36B58F] hover:bg-[#2d9676] text-[#080A0F] font-semibold">
                               <Download className="h-3.5 w-3.5 mr-1.5" /> Download MP4 Commercial
                             </Button>
                           </a>
-                        )}
+                        ) : vid.script_id ? (
+                          <Button
+                            variant="brand"
+                            size="sm"
+                            className="flex-1 text-xs bg-[#36B58F] hover:bg-[#2d9676] text-[#080A0F] font-semibold"
+                            onClick={() => {
+                              setVideoPlaybackErrors((prev) => ({ ...prev, [vid.id]: false }))
+                              handleRenderVideo(vid.script_id!)
+                            }}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Re-render Commercial
+                          </Button>
+                        ) : null}
                         <Button
                           variant="ghost"
                           size="sm"

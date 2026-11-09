@@ -145,6 +145,33 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
                     }
                     await db.video_jobs.update_one({"_id": doc["_id"]}, {"$set": updates})
                     doc.update(updates)
+    elif status == "completed":
+        v_id = str(doc["_id"])
+        from pathlib import Path
+        clean_name = f"video_{v_id}.mp4"
+        raw_url = doc.get("video_url") or ""
+        if raw_url:
+            clean_name = Path(raw_url).name
+        
+        candidates = [
+            Path(settings.MEDIA_DIR) / "videos" / clean_name,
+            Path("backend/media/videos") / clean_name,
+            Path("media/videos") / clean_name,
+            Path(doc.get("video_path") or ""),
+        ]
+        file_exists = any(c.exists() and c.is_file() and c.stat().st_size > 100_000 for c in candidates if str(c))
+        if not file_exists:
+            # Physical file missing from container filesystem (e.g. after deployment or ephemeral restart)
+            now = datetime.now(timezone.utc)
+            updates = {
+                "status": "failed",
+                "error_message": "Rendered video file is unavailable on this server instance. Click Re-render to regenerate.",
+                "progress_percent": 0,
+                "video_url": None,
+                "completed_at": now,
+            }
+            await db.video_jobs.update_one({"_id": doc["_id"]}, {"$set": updates})
+            doc.update(updates)
     return doc
 
 

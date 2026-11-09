@@ -131,6 +131,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Range", "Accept-Ranges", "Content-Length", "Content-Type"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
@@ -158,7 +159,7 @@ app.include_router(creative_briefs_router, prefix=API_PREFIX)
 app.include_router(integrations_router, prefix=API_PREFIX)
 app.include_router(dashboard_router, prefix=API_PREFIX)
 app.include_router(assets_router, prefix=API_PREFIX)
-app.include_router(media_router, prefix=API_PREFIX)
+app.include_router(media_router, prefix=API_PREFIX, include_in_schema=False)
 app.include_router(media_router)  # Also serve at /media/videos/... and /media/thumbnails/...
 app.include_router(workflow_router, prefix=API_PREFIX)
 app.include_router(ws_router)  # WebSocket endpoint /ws/{client_id}

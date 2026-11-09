@@ -5,7 +5,7 @@ import os
 from typing import Annotated, List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from bson import ObjectId
 
 from database.connection import get_database
@@ -130,9 +130,9 @@ async def delete_asset(
 media_router = APIRouter(prefix="/media", tags=["Media"])
 
 
-@media_router.get("/videos/{filename}")
+@media_router.api_route("/videos/{filename}", methods=["GET", "HEAD"])
 async def serve_video(filename: str, request: Request):
-    """Serve generated video files with robust location resolution and HTTP 206 Partial Content streaming."""
+    """Serve generated video files with robust location resolution, HEAD support, and HTTP 206 Partial Content streaming."""
     import pathlib
     clean_filename = pathlib.Path(filename).name
     backend_root = pathlib.Path(__file__).resolve().parent.parent
@@ -140,6 +140,7 @@ async def serve_video(filename: str, request: Request):
     candidates = [
         project_root / "media" / "videos" / clean_filename,
         pathlib.Path(settings.MEDIA_DIR) / "videos" / clean_filename,
+        pathlib.Path(settings.MEDIA_DIR).resolve() / "videos" / clean_filename,
         backend_root / "media" / "videos" / clean_filename,
         pathlib.Path.cwd() / "media" / "videos" / clean_filename,
         pathlib.Path.cwd() / "backend" / "media" / "videos" / clean_filename,
@@ -149,6 +150,9 @@ async def serve_video(filename: str, request: Request):
         raise HTTPException(status_code=404, detail="Video file not found.")
 
     file_size = os.path.getsize(video_path)
+    if file_size == 0:
+        raise HTTPException(status_code=404, detail="Video file is empty.")
+
     range_header = request.headers.get("range")
 
     if range_header:
@@ -157,6 +161,19 @@ async def serve_video(filename: str, request: Request):
         end = int(byte_range[1]) if len(byte_range) > 1 and byte_range[1] else file_size - 1
         end = min(end, file_size - 1)
         content_length = (end - start) + 1
+
+        headers = {
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(content_length),
+            "Content-Type": "video/mp4",
+            "Content-Encoding": "identity",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Range, Accept-Ranges, Content-Length, Content-Type",
+        }
+
+        if request.method == "HEAD":
+            return Response(status_code=206, headers=headers)
 
         def iter_file():
             with open(video_path, "rb") as f:
@@ -171,24 +188,25 @@ async def serve_video(filename: str, request: Request):
                     remaining -= len(data)
                     yield data
 
-        headers = {
-            "Content-Range": f"bytes {start}-{end}/{file_size}",
-            "Accept-Ranges": "bytes",
-            "Content-Length": str(content_length),
-            "Content-Type": "video/mp4",
-            "Content-Encoding": "identity",
-        }
         return StreamingResponse(iter_file(), status_code=206, headers=headers)
+
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Length": str(file_size),
+        "Content-Type": "video/mp4",
+        "Content-Encoding": "identity",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "Content-Range, Accept-Ranges, Content-Length, Content-Type",
+    }
+
+    if request.method == "HEAD":
+        return Response(status_code=200, headers=headers)
 
     return FileResponse(
         str(video_path),
         media_type="video/mp4",
         filename=clean_filename,
-        headers={
-            "Accept-Ranges": "bytes",
-            "Content-Length": str(file_size),
-            "Content-Encoding": "identity",
-        }
+        headers=headers,
     )
 
 

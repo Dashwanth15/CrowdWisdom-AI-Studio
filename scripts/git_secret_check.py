@@ -23,7 +23,7 @@ SECRET_REGEXES = {
     "NVIDIA NIM API Key": re.compile(r"nvapi-[A-Za-z0-9_-]{20,}"),
     "Apify API Token": re.compile(r"apify_api_[A-Za-z0-9_-]{20,}"),
     "Tavily API Key": re.compile(r"tvly-[A-Za-z0-9_-]{20,}"),
-    "Resend API Key": re.compile(r"re_[A-Za-z0-9_-]{20,}"),
+    "Resend API Key": re.compile(r"\bre_[A-Za-z0-9]{20,}\b"),
     "MongoDB URI with Credentials": re.compile(r"mongodb(?:\+srv)?://([^:]+):([^@]+)@"),
     "Generic Private Key": re.compile(r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----"),
 }

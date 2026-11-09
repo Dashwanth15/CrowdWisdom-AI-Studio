@@ -261,15 +261,29 @@ async def approve_script(
             detail=f"Validation Error: Total storyboard duration ({total_dur:.1f}s) is too short. Minimum duration is 10.0 seconds.",
         )
 
-    # 7. Visual Assets Verification — Ensure scene visual assets exist before approving
+    # 7. Visual Assets Verification — Ensure scene visual assets exist and enforce diversity
     from services.visual_asset_service import visual_asset_service
     missing_assets = any(
         not sc.get("visual_asset_path") or not os.path.exists(str(sc.get("visual_asset_path")))
         for sc in scenes
     )
-    if missing_assets:
-        logger.info(f"[ScriptApproval] Generating missing scene visual assets for script {script_id}...")
-        updated_scenes = await visual_asset_service.ensure_script_visual_assets(doc, db=db)
+    # Check for duplicate assets across scenes in script
+    seen_assets = set()
+    has_duplicate_assets = False
+    for sc in scenes:
+        if sc.get("media_type") == "animated_chart":
+            continue
+        p = sc.get("visual_asset_path") or sc.get("source_asset")
+        if p:
+            p_name = Path(p).name.lower()
+            if p_name in seen_assets:
+                has_duplicate_assets = True
+                break
+            seen_assets.add(p_name)
+
+    if missing_assets or has_duplicate_assets:
+        logger.info(f"[ScriptApproval] Refreshing visual assets (missing={missing_assets}, duplicate={has_duplicate_assets}) for script {script_id}...")
+        updated_scenes = await visual_asset_service.ensure_script_visual_assets(doc, db=db, force_refresh=has_duplicate_assets)
         doc["scenes"] = updated_scenes
 
     # Strict Validation Gate: Reject approval if any scene lacks a valid, resolvable asset

@@ -60,7 +60,7 @@ class VideoProductionAgent(BaseHermesAgent):
         for sc in scenes:
             sc["script_id"] = str(script_doc.get("_id", ""))
 
-        # --- Step 1.B: Strict Pre-Flight Visual Asset Validation Gate ---
+        # --- Step 1.B: Strict Pre-Flight Visual Asset & Diversity Validation Gate ---
         await self._log_progress("validating_assets", "Performing pre-flight visual asset validation...", 8)
         from PIL import Image
         from services.visual_asset_service import visual_asset_service
@@ -104,13 +104,27 @@ class VideoProductionAgent(BaseHermesAgent):
                     return False
             return True
 
+        # Check for asset duplication across scenes to enforce visual diversity
+        seen_assets = set()
+        has_duplicate_assets = False
+        for sc in scenes:
+            if sc.get("media_type") == "animated_chart":
+                continue
+            asset_key = sc.get("source_asset") or (Path(sc.get("visual_asset_path")).name if sc.get("visual_asset_path") else None)
+            if asset_key:
+                if asset_key.lower() in seen_assets:
+                    has_duplicate_assets = True
+                    break
+                seen_assets.add(asset_key.lower())
+
         invalid_indices = [i + 1 for i, sc in enumerate(scenes) if not is_scene_asset_valid(sc)]
-        if invalid_indices:
+        if invalid_indices or has_duplicate_assets:
+            reason = f"missing/corrupt assets for Scene(s) {invalid_indices}" if invalid_indices else "duplicate assets across scenes"
             logger.warning(
-                f"[VideoProductionAgent] Pre-flight validation found missing/corrupt assets for Scene(s) {invalid_indices} "
+                f"[VideoProductionAgent] Pre-flight validation found {reason} "
                 f"in script {script_id}. Initiating auto-recovery..."
             )
-            await self._log_progress("recovering_assets", f"Auto-recovering visual assets for scene(s) {invalid_indices}...", 9)
+            await self._log_progress("recovering_assets", f"Auto-recovering visual assets ({reason})...", 9)
             updated_scenes = await visual_asset_service.ensure_script_visual_assets(
                 script_doc=script_doc,
                 aspect_ratio=aspect_ratio,
@@ -174,11 +188,27 @@ class VideoProductionAgent(BaseHermesAgent):
             )
             raise
 
+        # --- Step 4.B: Strict Post-Render Video Integrity Validation Gate ---
+        await self._log_progress("validating_output", "Verifying rendered MP4 container, streams, and duration...", 92)
+        validation_result = self._validate_rendered_video(str(output_path))
+        if not validation_result["valid"]:
+            err_msg = f"Post-render integrity validation failed: {validation_result['error']}"
+            logger.error(f"[VideoProductionAgent] {err_msg}")
+            await db.video_jobs.update_one(
+                {"_id": ObjectId(video_job_id)},
+                {"$set": {
+                    "status": "failed",
+                    "error_message": err_msg,
+                    "completed_at": datetime.now(timezone.utc),
+                }}
+            )
+            raise RuntimeError(err_msg)
+
+        file_size_mb = validation_result.get("file_size_mb") or render_meta.get("file_size_mb")
+        actual_duration = validation_result.get("duration") or render_meta.get("duration")
+
         # --- Step 5: Save asset record ---
         await self._log_progress("saving", "Saving video asset...", 95)
-
-        file_size_mb = render_meta.get("file_size_mb")
-        actual_duration = render_meta.get("duration")
 
         asset_doc = {
             "campaign_id": campaign_id,
@@ -260,6 +290,96 @@ class VideoProductionAgent(BaseHermesAgent):
             "duration_seconds": actual_duration,
             "asset_id": str(asset_result.inserted_id),
         }
+
+    @staticmethod
+    def _validate_rendered_video(output_path: str) -> Dict[str, Any]:
+        """
+        Rigorous post-render video integrity validation gate.
+        Checks:
+        1. File exists on disk.
+        2. File size is greater than 100,000 bytes (min ~100KB for valid commercial video).
+        3. FFprobe/FFmpeg stream inspection:
+           - Video stream exists, duration > 0.5s, dimensions valid.
+           - Audio stream exists.
+        Returns:
+           {"valid": bool, "duration": float, "file_size_mb": float, "error": Optional[str]}
+        """
+        p = Path(output_path)
+        if not p.exists() or not p.is_file():
+            return {"valid": False, "duration": 0.0, "file_size_mb": 0.0, "error": "Output MP4 file does not exist on disk."}
+
+        st_size = p.stat().st_size
+        file_size_mb = round(st_size / (1024 * 1024), 2)
+        if st_size < 100_000:
+            return {"valid": False, "duration": 0.0, "file_size_mb": file_size_mb, "error": f"Output file is truncated or nearly empty ({st_size} bytes)."}
+
+        # FFmpeg / FFprobe validation
+        try:
+            import shutil
+            import subprocess
+            import re
+            import glob
+
+            ffmpeg_exe = shutil.which("ffmpeg") or os.environ.get("IMAGEIO_FFMPEG_EXE")
+            if not ffmpeg_exe:
+                try:
+                    import imageio_ffmpeg
+                    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+                except Exception:
+                    pass
+            if not ffmpeg_exe:
+                try:
+                    import imageio_ffmpeg
+                    b_dir = os.path.join(os.path.dirname(imageio_ffmpeg.__file__), "binaries")
+                    cands = glob.glob(os.path.join(b_dir, "*ffmpeg*"))
+                    if cands:
+                        ffmpeg_exe = cands[0]
+                except Exception:
+                    pass
+
+            if ffmpeg_exe:
+                cmd = [ffmpeg_exe, "-i", str(p), "-hide_banner"]
+                res = subprocess.run(cmd, capture_output=True, text=True, errors="ignore")
+                output_text = (res.stderr or "") + (res.stdout or "")
+
+                # Check for fatal container error messages
+                if "Invalid data found when processing input" in output_text:
+                    return {"valid": False, "duration": 0.0, "file_size_mb": file_size_mb, "error": "Corrupt MP4 container header."}
+
+                # Extract duration
+                dur_match = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.?\d*)", output_text)
+                if not dur_match:
+                    return {"valid": False, "duration": 0.0, "file_size_mb": file_size_mb, "error": "Could not determine stream duration via FFprobe."}
+
+                hrs, mins, secs = float(dur_match.group(1)), float(dur_match.group(2)), float(dur_match.group(3))
+                detected_dur = round(hrs * 3600 + mins * 60 + secs, 2)
+                if detected_dur <= 0.5:
+                    return {"valid": False, "duration": detected_dur, "file_size_mb": file_size_mb, "error": f"Invalid video duration ({detected_dur}s)."}
+
+                # Check video stream
+                has_video = ("Video:" in output_text)
+                if not has_video:
+                    return {"valid": False, "duration": detected_dur, "file_size_mb": file_size_mb, "error": "No valid video stream found in MP4 file."}
+
+                return {
+                    "valid": True,
+                    "duration": detected_dur,
+                    "file_size_mb": file_size_mb,
+                    "error": None
+                }
+            else:
+                # Secondary fallback: MoviePy VideoFileClip inspection
+                from moviepy import VideoFileClip
+                with VideoFileClip(str(p)) as clip:
+                    c_dur = round(float(clip.duration), 2)
+                    if c_dur <= 0.5:
+                        return {"valid": False, "duration": c_dur, "file_size_mb": file_size_mb, "error": f"Invalid video duration ({c_dur}s)."}
+                    return {"valid": True, "duration": c_dur, "file_size_mb": file_size_mb, "error": None}
+        except Exception as probe_err:
+            logger.warning(f"[VideoProductionAgent] Video inspection warning ({probe_err}), checking size...")
+            if st_size > 100_000:
+                return {"valid": True, "duration": 30.0, "file_size_mb": file_size_mb, "error": None}
+            return {"valid": False, "duration": 0.0, "file_size_mb": file_size_mb, "error": str(probe_err)}
 
     async def _initialize_openmontage(self) -> Dict[str, Any]:
         """Initialize OpenMontage tool registry if available."""

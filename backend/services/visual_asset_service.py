@@ -166,13 +166,21 @@ class VisualAssetService:
         scene_num = int(scene.get("scene_number", 1))
         seed_val = int(hashlib.md5(f"{campaign_id or 'default'}_{scene_num}".encode()).hexdigest(), 16)
 
-        is_product = (scene_visual_type == "product_demo") or any(
-            k in desc for k in [
-                "crowdpulse", "crowdmap", "radar", "software interface", "platform ui",
-                "tablet", "ipad", "laptop", "terminal", "telemetry", "dashboard",
-                "conviction meter", "pro crowd bar", "sentiment waveform"
-            ]
-        )
+        # Strictly respect explicit scene_visual_type classification
+        # Human cinematography scenes must NEVER be forced into product demo plates due to device keywords
+        if scene_visual_type == "human_cinematography":
+            is_product = False
+        elif scene_visual_type == "product_demo":
+            is_product = True
+        elif scene_visual_type == "animated_chart":
+            is_product = False
+        else:
+            is_product = (scene_num == 3) or any(
+                k in desc for k in [
+                    "crowdpulse", "crowdmap", "radar sweep", "software interface", "platform ui",
+                    "conviction meter", "pro crowd bar", "sentiment waveform", "dashboard telemetry"
+                ]
+            )
 
         # Build candidate pools by semantic role
         if is_product:
@@ -182,8 +190,8 @@ class VisualAssetService:
                 "platform_laptop_projection.jpg",
                 "platform_fullscreen_terminal.jpg",
             ]
-        elif scene_num == 1 or any(k in desc for k in ["morning", "dawn", "coffee", "apartment", "typing", "keyboard"]):
-            # Scene 1: Opening context / tension / workstation
+        elif scene_num == 1 or any(k in desc for k in ["loss", "mistake", "morning", "dawn", "coffee", "apartment", "typing", "keyboard"]):
+            # Scene 1: Opening context / tension / financial loss / workstation
             candidates = [
                 "human_marcus_options.jpg",
                 "human_dawn_workstation.jpg",
@@ -194,9 +202,9 @@ class VisualAssetService:
         elif scene_num == 4 or any(k in desc for k in ["closing", "leaning back", "calm", "confidence", "future", "boardroom", "rooftop", "terrace", "skyline", "window"]):
             # Scene 4: Outcome / confident clarity / executive resolution
             candidates = [
-                "human_trader_dawn_confidence.jpg",
                 "human_highrise_skyline.jpg",
                 "human_city_rooftop_terrace.jpg",
+                "human_trader_dawn_confidence.jpg",
                 "human_executive_boardroom.jpg",
                 "human_marcus_options.jpg",
             ]
@@ -360,7 +368,7 @@ class VisualAssetService:
                 scene_visual_type = "product_demo" if scene_num == 3 else ("human_cinematography" if scene_num in [1, 4] else "animated_chart")
 
         # -------------------------------------------------------------
-        # 0. Asset Preservation Check (with Type-Safety)
+        # 0. Asset Preservation Check (with Type-Safety & Diversity)
         # -------------------------------------------------------------
         existing_path = scene.get("visual_asset_path")
         resolved_existing = None
@@ -379,6 +387,31 @@ class VisualAssetService:
                 if cand.exists() and cand.is_file() and cand.stat().st_size > 1000:
                     resolved_existing = str(cand)
                     break
+
+        # Strictly invalidate resolved_existing if it violates diversity or scene type
+        if resolved_existing:
+            cand_p = Path(resolved_existing)
+            cand_name_lower = cand_p.name.lower()
+            cand_stem_lower = cand_p.stem.lower()
+
+            # 1. Enforce cross-scene non-duplication: if already used by another scene in this run, discard
+            if excluded_assets:
+                ex_set = {str(x).lower() for x in excluded_assets if x}
+                if cand_name_lower in ex_set or cand_stem_lower in ex_set:
+                    logger.info(f"[VisualAssetService] Existing asset '{cand_p.name}' is already used by an earlier scene. Rejecting duplicate to enforce diversity.")
+                    resolved_existing = None
+
+            # 2. Enforce semantic type safety: human scenes cannot preserve platform mockup plates
+            if resolved_existing and scene_visual_type == "human_cinematography":
+                if cand_name_lower.startswith("platform_") or "crowdwisdom_ui" in cand_name_lower:
+                    logger.info(f"[VisualAssetService] Existing asset '{cand_p.name}' is a platform mockup, but Scene {scene_num} requires human cinematography. Rejecting.")
+                    resolved_existing = None
+
+            # 3. Product demo scenes cannot preserve human photos
+            if resolved_existing and scene_visual_type == "product_demo":
+                if cand_name_lower.startswith("human_"):
+                    logger.info(f"[VisualAssetService] Existing asset '{cand_p.name}' is human photography, but Scene {scene_num} requires a product demo. Rejecting.")
+                    resolved_existing = None
 
         if resolved_existing and not force_refresh:
             is_mp4 = resolved_existing.lower().endswith(".mp4")
@@ -445,13 +478,20 @@ class VisualAssetService:
         # -------------------------------------------------------------
         # 1.B Dynamic CrowdWisdom Product Demonstration Canvas
         # -------------------------------------------------------------
-        is_product_scene = (scene_visual_type == "product_demo") or any(
-            w in desc_lower for w in [
-                "crowdpulse", "crowdmap", "radar", "conviction meter", "pro crowd bar",
-                "accumulation telemetry", "tablet device", "hardware_tablet", "hardware_laptop",
-                "software interface", "platform ui", "terminal display", "ipad", "laptop", "tablet"
-            ]
-        )
+        # Human cinematography scenes must NEVER be turned into product demo mockups
+        if scene_visual_type == "human_cinematography":
+            is_product_scene = False
+        elif scene_visual_type == "animated_chart":
+            is_product_scene = False
+        elif scene_visual_type == "product_demo":
+            is_product_scene = True
+        else:
+            is_product_scene = (scene_num == 3) or any(
+                w in desc_lower for w in [
+                    "crowdpulse", "crowdmap", "radar sweep", "conviction meter", "pro crowd bar",
+                    "accumulation telemetry", "software interface", "platform ui"
+                ]
+            )
         if is_product_scene:
             camp_seed = int(hashlib.md5(f"{campaign_id or 'default'}_{script_id}".encode()).hexdigest(), 16)
 
@@ -815,12 +855,25 @@ class VisualAssetService:
 
         logger.info(f"[VisualAssetService] Ensuring visual assets for {len(scenes)} scenes in script {script_id} (force_refresh={force_refresh})...")
 
+        # Check if the incoming scenes contain duplicate visual assets across scenes
+        existing_assigned = [
+            Path(sc.get("visual_asset_path")).name.lower()
+            for sc in scenes
+            if sc.get("visual_asset_path") and sc.get("media_type") != "animated_chart"
+        ]
+        has_internal_duplicates = len(existing_assigned) != len(set(existing_assigned))
+        if has_internal_duplicates:
+            logger.info(f"[VisualAssetService] Script {script_id} contains duplicate assets ({existing_assigned}). Auto-enforcing force_refresh to eliminate repetition.")
+            force_refresh = True
+
         if force_refresh:
             await asset_registry.clear_script_usage(script_id)
+            allocated_in_run = set()
+        else:
+            used_in_script = await asset_registry.get_used_asset_ids_in_script(script_id)
+            allocated_in_run = set(used_in_script)
 
-        used_in_script = await asset_registry.get_used_asset_ids_in_script(script_id)
         recently_used = await asset_registry.get_recently_used_asset_ids(current_campaign_id=campaign_id)
-        allocated_in_run: Set[str] = set(used_in_script)
 
         results = []
         for sc in scenes:
