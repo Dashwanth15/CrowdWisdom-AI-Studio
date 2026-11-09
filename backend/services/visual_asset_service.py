@@ -622,14 +622,24 @@ class VisualAssetService:
                 ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
                 cmd = [ffmpeg_exe, "-y", "-ss", "00:00:01", "-i", str(stock_path), "-vframes", "1", str(file_path)]
                 subprocess.run(cmd, capture_output=True, timeout=5)
-            except Exception:
-                pass
+            except Exception as extract_err:
+                logger.warning(f"[VisualAssetService] Frame extraction notice: {extract_err}")
+
+            if not file_path.exists():
+                verified_fb = self._select_verified_fallback_asset(scene, "human_cinematography", campaign_id=campaign_id)
+                if verified_fb and os.path.exists(verified_fb):
+                    import shutil
+                    shutil.copyfile(verified_fb, str(file_path))
+
+            # visual_asset_url provides the preview JPEG for storyboard cards; visual_asset_path provides the MP4 for video composition
+            preview_url = file_url if file_path.exists() else f"/media/assets/stock_footage/{Path(stock_path).name}"
             return {
                 "media_type": "video_clip",
                 "scene_visual_type": "human_cinematography",
                 "source_asset": Path(stock_path).name,
                 "visual_asset_path": str(stock_path),
-                "visual_asset_url": f"/media/assets/stock_footage/{Path(stock_path).name}",
+                "visual_asset_url": preview_url,
+                "video_asset_url": f"/media/assets/stock_footage/{Path(stock_path).name}",
                 "visual_asset_status": "completed",
                 "visual_asset_provider": "bundled_commercial_footage",
                 "width": width,

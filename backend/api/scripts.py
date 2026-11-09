@@ -5,6 +5,7 @@ Script review, approval, rejection, and management.
 import os
 import json
 import logging
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Response
@@ -168,6 +169,35 @@ async def export_script_json(
     )
 
 
+def _resolve_scene_asset(p: Optional[str]) -> Optional[Path]:
+    if not p:
+        return None
+    p_obj = Path(p)
+    if p_obj.is_absolute() and p_obj.exists() and p_obj.is_file():
+        return p_obj
+    clean_name = p_obj.name
+    from config import settings
+    media_dir = Path(settings.MEDIA_DIR)
+    backend_root = Path(__file__).resolve().parent.parent
+    project_root = backend_root.parent
+    candidates = [
+        p_obj,
+        project_root / p_obj,
+        backend_root / p_obj,
+        media_dir / "assets" / clean_name,
+        media_dir / "assets" / "stock_footage" / clean_name,
+        media_dir / "assets" / "fallback_library" / clean_name,
+        project_root / "media" / "assets" / clean_name,
+        project_root / "media" / "assets" / "stock_footage" / clean_name,
+        backend_root / "media" / "assets" / clean_name,
+        backend_root / "media" / "assets" / "stock_footage" / clean_name,
+    ]
+    for c in candidates:
+        if c.exists() and c.is_file() and c.stat().st_size > 1000:
+            return c
+    return None
+
+
 @router.post("/{script_id}/approve", response_model=ScriptOut)
 async def approve_script(
     script_id: str,
@@ -263,8 +293,9 @@ async def approve_script(
 
     # 7. Visual Assets Verification — Ensure scene visual assets exist and enforce diversity
     from services.visual_asset_service import visual_asset_service
+
     missing_assets = any(
-        not sc.get("visual_asset_path") or not os.path.exists(str(sc.get("visual_asset_path")))
+        sc.get("media_type") != "animated_chart" and not _resolve_scene_asset(sc.get("visual_asset_path"))
         for sc in scenes
     )
     # Check for duplicate assets across scenes in script
@@ -294,8 +325,11 @@ async def approve_script(
         if m_type == "animated_chart":
             continue
         p = sc.get("visual_asset_path")
-        if not p or not os.path.exists(str(p)) or sc.get("visual_asset_status") == "failed":
+        resolved = _resolve_scene_asset(p)
+        if not resolved or sc.get("visual_asset_status") == "failed":
             failed_scenes.append(s_num)
+        elif resolved:
+            sc["visual_asset_path"] = str(resolved)
 
     if failed_scenes:
         raise HTTPException(

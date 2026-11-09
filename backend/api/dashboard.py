@@ -230,24 +230,36 @@ async def serve_thumbnail(filename: str):
     return FileResponse(str(thumb_path), media_type="image/jpeg")
 
 
-@media_router.get("/assets/{filename}")
-async def serve_asset(filename: str):
-    """Serve storyboard scene visual asset files with robust path resolution across project and backend media dirs."""
+@media_router.get("/assets/{filepath:path}")
+async def serve_asset(filepath: str):
+    """Serve storyboard scene visual asset files with robust path resolution across project, backend, stock footage, and fallback dirs."""
     import pathlib
-    clean_filename = pathlib.Path(filename).name
+    clean_filepath = filepath.replace("\\", "/").lstrip("/")
+    clean_filename = pathlib.Path(clean_filepath).name
     backend_root = pathlib.Path(__file__).resolve().parent.parent
     project_root = backend_root.parent
+
+    media_dir = pathlib.Path(settings.MEDIA_DIR)
     candidates = [
+        project_root / "media" / "assets" / clean_filepath,
+        media_dir / "assets" / clean_filepath,
+        backend_root / "media" / "assets" / clean_filepath,
         project_root / "media" / "assets" / clean_filename,
-        pathlib.Path(settings.MEDIA_DIR) / "assets" / clean_filename,
+        media_dir / "assets" / clean_filename,
         backend_root / "media" / "assets" / clean_filename,
-        pathlib.Path.cwd() / "media" / "assets" / clean_filename,
-        pathlib.Path.cwd() / "backend" / "media" / "assets" / clean_filename,
+        project_root / "media" / "assets" / "stock_footage" / clean_filename,
+        media_dir / "assets" / "stock_footage" / clean_filename,
+        backend_root / "media" / "assets" / "stock_footage" / clean_filename,
+        project_root / "media" / "assets" / "fallback_library" / clean_filename,
+        media_dir / "assets" / "fallback_library" / clean_filename,
+        backend_root / "media" / "assets" / "fallback_library" / clean_filename,
+        pathlib.Path.cwd() / "media" / "assets" / clean_filepath,
+        pathlib.Path.cwd() / "backend" / "media" / "assets" / clean_filepath,
     ]
     asset_path = next((p for p in candidates if p.exists() and p.is_file()), None)
     if not asset_path:
         # Check if any asset in candidate directories starts with the same script/hash suffix
-        for search_dir in [project_root / "media" / "assets", pathlib.Path(settings.MEDIA_DIR) / "assets"]:
+        for search_dir in [project_root / "media" / "assets", media_dir / "assets"]:
             if search_dir.exists():
                 matched = list(search_dir.glob(f"*{clean_filename.split('_')[-1]}*"))
                 if matched:
@@ -256,19 +268,31 @@ async def serve_asset(filename: str):
 
     if not asset_path:
         # Graceful fallback: return any existing asset rather than breaking the UI with 404
-        for search_dir in [project_root / "media" / "assets", pathlib.Path(settings.MEDIA_DIR) / "assets"]:
+        for search_dir in [project_root / "media" / "assets", media_dir / "assets"]:
             if search_dir.exists():
                 any_assets = list(search_dir.glob("*.jpg")) or list(search_dir.glob("*.png"))
                 if any_assets:
                     asset_path = any_assets[0]
-                    logger.info(f"Visual asset {filename} not found, served graceful fallback {asset_path.name}")
+                    logger.info(f"Visual asset {filepath} not found, served graceful fallback {asset_path.name}")
                     break
 
     if not asset_path:
-        raise HTTPException(status_code=404, detail=f"Visual asset {filename} not found.")
+        raise HTTPException(status_code=404, detail=f"Visual asset {filepath} not found.")
 
-    media_type = "image/png" if str(asset_path).lower().endswith(".png") else "image/jpeg"
-    return FileResponse(str(asset_path), media_type=media_type)
+    suffix = str(asset_path).lower()
+    if suffix.endswith(".png"):
+        media_type = "image/png"
+    elif suffix.endswith((".mp4", ".mov", ".webm")):
+        media_type = "video/mp4"
+    else:
+        media_type = "image/jpeg"
+
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Length": str(os.path.getsize(asset_path)),
+        "Access-Control-Allow-Origin": "*",
+    }
+    return FileResponse(str(asset_path), media_type=media_type, headers=headers)
 
 
 # --- Workflow Router ---

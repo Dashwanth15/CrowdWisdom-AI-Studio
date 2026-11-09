@@ -132,15 +132,21 @@ export function resolveMediaUrl(url: string | undefined | null): string {
   const prefix = getMediaHostPrefix()
 
   let path = ''
-  // Handle bare filenames or any string referencing asset_
-  if (cleanUrl.includes('asset_')) {
+  // 1. If URL already has full media path, preserve exactly as specified
+  if (cleanUrl.startsWith('/media/') || cleanUrl.startsWith('media/')) {
+    path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`
+  } else if (cleanUrl.includes('asset_')) {
+    // 2. Handle asset_ prefix
     const filename = cleanUrl.split('/').pop()
     path = `/media/assets/${filename}`
   } else if (cleanUrl.endsWith('.mp4')) {
-    const filename = cleanUrl.split('/').pop()
-    path = `/media/videos/${filename}`
-  } else if (cleanUrl.startsWith('media/')) {
-    path = `/${cleanUrl}`
+    // 3. Handle stock footage or rendered videos
+    const filename = cleanUrl.split('/').pop() || cleanUrl
+    if (filename.includes('typing') || filename.includes('timelapse') || filename.includes('highrise') || filename.includes('downtown')) {
+      path = `/media/assets/stock_footage/${filename}`
+    } else {
+      path = `/media/videos/${filename}`
+    }
   } else {
     path = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`
   }

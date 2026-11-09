@@ -166,10 +166,10 @@ app.include_router(ws_router)  # WebSocket endpoint /ws/{client_id}
 
 
 # Direct asset fallback routes
-@app.get("/assets/{filename}")
-async def serve_direct_asset_route(filename: str):
+@app.get("/assets/{filepath:path}")
+async def serve_direct_asset_route(filepath: str):
     from api.dashboard import serve_asset
-    return await serve_asset(filename)
+    return await serve_asset(filepath)
 
 
 def _sanitize_error_message(exc: Exception) -> str:
