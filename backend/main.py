@@ -128,6 +128,7 @@ async def redirect_api_openapi():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -163,6 +164,7 @@ app.include_router(media_router, prefix=API_PREFIX, include_in_schema=False)
 app.include_router(media_router)  # Also serve at /media/videos/... and /media/thumbnails/...
 app.include_router(workflow_router, prefix=API_PREFIX)
 app.include_router(ws_router)  # WebSocket endpoint /ws/{client_id}
+app.include_router(ws_router, prefix=API_PREFIX)  # Also mount at /api/ws/{client_id} for compatibility
 
 
 # Direct asset fallback routes
@@ -195,9 +197,16 @@ async def global_exception_handler(request: Request, exc: Exception):
     else:
         client_detail = f"Internal server error: {sanitized_msg}"
 
+    headers = {}
+    origin = request.headers.get("origin")
+    if origin and (origin in settings.cors_origins_list or "onrender.com" in origin or "localhost" in origin):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+
     return JSONResponse(
         status_code=500,
-        content={"detail": client_detail}
+        content={"detail": client_detail},
+        headers=headers,
     )
 
 

@@ -49,8 +49,8 @@ class Settings(BaseSettings):
     APP_SECRET_KEY: str = "replace_with_app_secret"
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = Field(default=8000, validation_alias=AliasChoices("APP_PORT", "PORT"))
-    FRONTEND_URL: str = "http://localhost:5173"
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000"
+    FRONTEND_URL: str = "https://crowdwisdom-ai-studio-ads.onrender.com"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000,https://crowdwisdom-ai-studio-ads.onrender.com"
 
     # MongoDB (Accepts both MONGODB_URL and MONGODB_URI)
     MONGODB_URL: str = Field(default="mongodb://localhost:27017", validation_alias=AliasChoices("MONGODB_URL", "MONGODB_URI"))
@@ -96,7 +96,10 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        origins = [origin.strip().rstrip("/") for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        prod_fe = "https://crowdwisdom-ai-studio-ads.onrender.com"
+        if prod_fe not in origins:
+            origins.append(prod_fe)
         if self.FRONTEND_URL:
             clean_fe = self.FRONTEND_URL.strip().rstrip("/")
             if clean_fe and clean_fe not in origins:
