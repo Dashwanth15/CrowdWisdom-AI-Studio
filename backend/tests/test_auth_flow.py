@@ -86,3 +86,4 @@ def test_invalid_credentials_rejected(client):
         )
         assert res.status_code == 401
         assert "Invalid credentials" in res.json().get("detail", "")
+

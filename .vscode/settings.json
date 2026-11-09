@@ -21,5 +21,8 @@
     "${workspaceFolder}/backend",
     "${workspaceFolder}/backend/vendor/hermes_agent",
     "${workspaceFolder}/backend/video_engine/openmontage"
-  ]
+  ],
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore"
 }
