@@ -335,12 +335,19 @@ class HermesOrchestrator:
             priority=5,
         )
 
+        # Store execution_id on the video_job document for dual-key tracking
+        await db.video_jobs.update_one(
+            {"_id": ObjectId(video_job_id)},
+            {"$set": {"execution_id": execution_id}}
+        )
+
         submitted = await job_manager.submit_job(
             job_id=execution_id,
             idempotency_key=idempotency_key,
             coro_func=lambda: self._run_agent_task("video_production", campaign_id, execution_id, full_input),
             job_type="video_production",
-            campaign_id=campaign_id
+            campaign_id=campaign_id,
+            related_id=video_job_id,
         )
 
         if not submitted:
@@ -472,6 +479,21 @@ class HermesOrchestrator:
             input_data=original["input_data"],
         )
 
+        related_id = None
+        if original.get("agent_type") == "video_production":
+            related_id = original.get("input_data", {}).get("video_job_id")
+            if related_id and ObjectId.is_valid(related_id):
+                await db.video_jobs.update_one(
+                    {"_id": ObjectId(related_id)},
+                    {"$set": {
+                        "status": "queued",
+                        "progress_percent": 0,
+                        "error_message": None,
+                        "execution_id": new_execution_id,
+                        "started_at": datetime.now(timezone.utc),
+                    }}
+                )
+
         idempotency_key = f"retry_{original['agent_type']}_{new_execution_id}"
         await job_manager.submit_job(
             job_id=new_execution_id,
@@ -483,7 +505,8 @@ class HermesOrchestrator:
                 original["input_data"],
             ),
             job_type=original["agent_type"],
-            campaign_id=original["campaign_id"]
+            campaign_id=original["campaign_id"],
+            related_id=related_id,
         )
         return new_execution_id
 

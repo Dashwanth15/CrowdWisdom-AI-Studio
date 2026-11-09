@@ -74,6 +74,8 @@ class JobManager:
         self._active_tasks: Dict[str, asyncio.Task] = {}
         # Active idempotency keys (e.g., "video_render_{script_id}")
         self._active_keys: Set[str] = set()
+        # Maps idempotency_key -> job_id
+        self._key_to_job_id: Dict[str, str] = {}
         # Cooperative cancellation tokens
         self._cancel_events: Dict[str, Any] = {}
         # Concurrency semaphore for heavy video rendering
@@ -269,7 +271,8 @@ class JobManager:
         idempotency_key: str,
         coro_func: Callable[[], Coroutine[Any, Any, Any]],
         job_type: str,
-        campaign_id: str
+        campaign_id: str,
+        related_id: Optional[str] = None,
     ) -> bool:
         """
         Submits a job for execution if not already actively running under idempotency_key.
@@ -282,20 +285,21 @@ class JobManager:
                 self._active_tasks.pop(t_id, None)
 
         if idempotency_key in self._active_keys:
-            # Verify if any task associated with this job is actually still alive
-            task_alive = any(
-                not t.done() for t_id, t in self._active_tasks.items() if t_id == job_id
-            )
-            if not task_alive:
-                self._active_keys.discard(idempotency_key)
-            else:
-                logger.warning(f"[JobManager] Duplicate job rejected for key: {idempotency_key}")
+            prev_job_id = self._key_to_job_id.get(idempotency_key)
+            if prev_job_id and prev_job_id in self._active_tasks and not self._active_tasks[prev_job_id].done():
+                logger.warning(f"[JobManager] Duplicate job rejected for key: {idempotency_key} (running task: {prev_job_id})")
                 return False
+            else:
+                self._active_keys.discard(idempotency_key)
+                self._key_to_job_id.pop(idempotency_key, None)
 
         self._active_keys.add(idempotency_key)
+        self._key_to_job_id[idempotency_key] = job_id
         import threading
         cancel_event = threading.Event()
         self._cancel_events[job_id] = cancel_event
+        if related_id:
+            self._cancel_events[related_id] = cancel_event
 
         is_video = (job_type == "video_production")
         if is_video:
@@ -308,7 +312,7 @@ class JobManager:
         async def _wrapper():
             try:
                 if is_video:
-                    timeout_sec = float(getattr(settings, "VIDEO_RENDER_TIMEOUT_SECONDS", 300))
+                    timeout_sec = float(getattr(settings, "VIDEO_RENDER_TIMEOUT_SECONDS", 600))
                     semaphore = self._get_video_semaphore()
                     async with semaphore:
                         self._queued_renders = max(0, self._queued_renders - 1)
@@ -324,6 +328,10 @@ class JobManager:
                             ev = self._cancel_events.get(job_id)
                             if ev:
                                 ev.set()
+                            if related_id:
+                                rev = self._cancel_events.get(related_id)
+                                if rev:
+                                    rev.set()
                             db = get_database()
                             await db.agent_executions.update_one(
                                 {"_id": ObjectId(job_id) if ObjectId.is_valid(job_id) else None},
@@ -333,6 +341,15 @@ class JobManager:
                                     "completed_at": datetime.now(timezone.utc)
                                 }}
                             )
+                            if related_id and ObjectId.is_valid(related_id):
+                                await db.video_jobs.update_one(
+                                    {"_id": ObjectId(related_id)},
+                                    {"$set": {
+                                        "status": "failed",
+                                        "error_message": f"Render timed out after {timeout_sec:.0f}s. Resources released.",
+                                        "completed_at": datetime.now(timezone.utc)
+                                    }}
+                                )
                         finally:
                             self._active_renders = max(0, self._active_renders - 1)
                 else:
@@ -342,20 +359,36 @@ class JobManager:
                 ev = self._cancel_events.get(job_id)
                 if ev:
                     ev.set()
+                if related_id:
+                    rev = self._cancel_events.get(related_id)
+                    if rev:
+                        rev.set()
                 db = get_database()
                 await db.agent_executions.update_one(
                     {"_id": ObjectId(job_id) if ObjectId.is_valid(job_id) else None},
                     {"$set": {"status": "cancelled", "completed_at": datetime.now(timezone.utc)}}
                 )
+                if related_id and ObjectId.is_valid(related_id):
+                    await db.video_jobs.update_one(
+                        {"_id": ObjectId(related_id)},
+                        {"$set": {"status": "cancelled", "completed_at": datetime.now(timezone.utc)}}
+                    )
             except Exception as e:
                 logger.error(f"[JobManager] Job {job_id} raised unhandled exception: {e}")
             finally:
                 self._cancel_events.pop(job_id, None)
+                if related_id:
+                    self._cancel_events.pop(related_id, None)
                 self._active_keys.discard(idempotency_key)
+                self._key_to_job_id.pop(idempotency_key, None)
                 self._active_tasks.pop(job_id, None)
+                if related_id:
+                    self._active_tasks.pop(related_id, None)
 
         task = asyncio.create_task(_wrapper())
         self._active_tasks[job_id] = task
+        if related_id:
+            self._active_tasks[related_id] = task
         return True
 
     def get_metrics(self) -> Dict[str, Any]:

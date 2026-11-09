@@ -113,13 +113,15 @@ async def _reconcile_video_job(doc: dict, db) -> dict:
     if not doc:
         return doc
     from workers.job_manager import is_mp4_valid_and_playable, job_manager
-    v_id = str(doc["_id"])
+    v_id = str(doc.get("_id", ""))
+    exec_id = str(doc.get("execution_id", ""))
 
     # If the task is actively executing in background workers on this instance, never prematurely abort
-    if v_id in job_manager._active_tasks:
-        active_task = job_manager._active_tasks[v_id]
-        if not active_task.done():
-            return doc
+    for candidate_id in (v_id, exec_id):
+        if candidate_id and candidate_id in job_manager._active_tasks:
+            active_task = job_manager._active_tasks[candidate_id]
+            if not active_task.done():
+                return doc
 
     status = doc.get("status")
     if status in ("queued", "processing", "composing", "rendering"):
