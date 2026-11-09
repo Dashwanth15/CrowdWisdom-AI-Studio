@@ -1,0 +1,386 @@
+{
+  "IN": {
+    "country_name": "India",
+    "evidence": [
+      {
+        "title": "\u201cOur brand narrative focusses on understanding how people experience the category\u201d: Jainam's Aishwarya Gupta",
+        "url": "https://www.adgully.com/post/18902/our-brand-narrative-focusses-on-understanding-how-people-experience-the-category-jainams-aishwarya-gupta",
+        "text_sample": "\u201cOur brand narrative focusses on understanding how people experience the category\u201d: Jainam's Aishwarya Gupta\n\n# \u201cOur brand narrative focusses on understanding how people experience the category\u201d: Jainam's Aishwarya Gupta \n\n Adgully Bureau | 2 months ago Views: 686 \n\nJainam has launched its first eve",
+        "published_date": "2026-08-05",
+        "date_verification_status": "verified",
+        "source_tier": 5,
+        "source_tier_name": "General Web Sources",
+        "confidence_score": 4.2,
+        "staleness_factor": "fresh"
+      },
+      {
+        "title": "Zerodha's next growth challenge: Why are Tier 2 and 3 investors swiping left on Zerodha? asks Nithin Kamath - The Economic Times",
+        "url": "https://economictimes.indiatimes.com/news/new-updates/zerodhas-next-growth-challenge-why-are-tier-2-and-3-investors-swiping-left-on-zerodha-asks-nithin-kamath/articleshow/122958508.cms",
+        "text_sample": "Zerodha's next growth challenge: Why are Tier 2 and 3 investors swiping left on Zerodha? asks Nithin Kamath - The Economic Times\n\nFEATURED FUNDS\u2605\u2605\u2605\u2605\u2605Motilal Oswal Midcap Fund Direct-Growth5Y Return23.13 % Invest Now\n\nBusiness News\u203a News\u203a Trending\u203aZerodha's next growth challenge: Why are Tier 2 and 3",
+        "published_date": "2025-07-28",
+        "date_verification_status": "verified",
+        "source_tier": 2,
+        "source_tier_name": "Tier-1 Financial Media & Institutional Reporting",
+        "confidence_score": 7.48,
+        "staleness_factor": "aged_over_1_year"
+      },
+      {
+        "title": "Nithin Kamath of Zerodha reveals the biggest challenge for stock brokers; find here | Stock Market News",
+        "url": "https://www.livemint.com/market/stock-market-news/nithin-kamath-of-zerodha-reveals-the-biggest-challenge-for-stock-brokers-find-here-11784794848281.html",
+        "text_sample": "Nithin Kamath of Zerodha reveals the biggest challenge for stock brokers; find here | Stock Market News\n\n# Nithin Kamath of Zerodha reveals the biggest challenge for stock brokers; find here\n\n## Zerodha CEO Nithin Kamath highlights retaining users as a major challenge for stockbroking platforms, as ",
+        "published_date": "2026-07-23",
+        "date_verification_status": "verified",
+        "source_tier": 2,
+        "source_tier_name": "Tier-1 Financial Media & Institutional Reporting",
+        "confidence_score": 8.8,
+        "staleness_factor": "fresh"
+      },
+      {
+        "title": "Clickbait has come for the Indian stock market",
+        "url": "https://trendlyne.com/posts/5354618/clickbait-has-come-for-the-indian-stock-market",
+        "text_sample": "Clickbait has come for the Indian stock market \n\n 10 Oct 2025 \n\n## Clickbait has come for the Indian stock market \n\nBy Swapnil Karkare\n\nI still remember signing 30-odd pages to open my first demat and trading account. There were so many forms that my signature became an unreadable scrawl by the end.",
+        "published_date": "2025-10-10",
+        "date_verification_status": "verified",
+        "source_tier": 5,
+        "source_tier_name": "General Web Sources",
+        "confidence_score": 3.57,
+        "staleness_factor": "aged_over_1_year"
+      },
+      {
+        "title": "India has democratised market access without demystifying market advantage",
+        "url": "https://www.moneycontrol.com/news/opinion/india-has-democratised-market-access-without-demystifying-market-advantage-14068601.html",
+        "text_sample": "India has democratised market access without demystifying market advantage\n# India has democratised market access without demystifying market advantage\nIndia has widened access to stock markets. The next step is to help investors understand market information, assess risks and make informed decision",
+        "published_date": "2026-11-04",
+        "date_verification_status": "verified",
+        "source_tier": 3,
+        "source_tier_name": "Industry Portals & Broker Platforms",
+        "confidence_score": 7.5,
+        "staleness_factor": "fresh"
+      }
+    ],
+    "benchmarks": [
+      {
+        "country": "IN",
+        "topic": "retail options trading behavior",
+        "finding": "SEBI published study revealing that 89% of individual retail traders in equity Futures & Options (F&O) incurred net losses, with average loss exceeding \u20b91.1 lakh per loss-maker. Highlights critical retail need for objective sentiment and risk management over emotional speculation.",
+        "source_url": "https://www.sebi.gov.in/reports-and-statistics/research/jan-2023/analysis-of-profit-and-loss-of-individual-traders-dealing-in-equity-f-and-o-segment_67525.html",
+        "publisher": "Securities and Exchange Board of India (SEBI)",
+        "publication_date": "2023-01-25",
+        "retrieval_date": "2026-11-09T15:09:40.934313+00:00",
+        "confidence_level": "verified",
+        "confidence_score": 9.9,
+        "evidence_type": "official_regulatory_study",
+        "relevant_audience_segment": "in_options_derivative_trader",
+        "is_verified_fact": true,
+        "discovery_provider": "SEBI Official Publications"
+      },
+      {
+        "country": "IN",
+        "topic": "retail demat adoption and market participation",
+        "finding": "India's demat account tally crossed 150 million registered investor accounts, with over 53% of incremental account additions originating from Tier 2, Tier 3, and smaller non-metro cities. Reflects rapid digital democratization through smartphone-first discount brokers.",
+        "source_url": "https://www.nseindia.com/market-data/market-pulse-monthly",
+        "publisher": "National Stock Exchange of India (NSE)",
+        "publication_date": "2024-03-31",
+        "retrieval_date": "2026-11-09T15:09:40.934313+00:00",
+        "confidence_level": "verified",
+        "confidence_score": 9.7,
+        "evidence_type": "official_exchange_data",
+        "relevant_audience_segment": "in_tier2_tier3_emerging_investor",
+        "is_verified_fact": true,
+        "discovery_provider": "NSE Market Pulse"
+      },
+      {
+        "country": "IN",
+        "topic": "social media trading noise & telegram tipsters",
+        "finding": "SEBI enforcement actions highlighted widespread financial manipulation across unauthorized Telegram and WhatsApp channels offering guaranteed returns, prompting SEBI's 2023-2024 guidelines barring registered intermediaries from associating with unregistered finfluencers.",
+        "source_url": "https://www.sebi.gov.in/legal/circulars/aug-2024/measures-to-curb-unauthorized-advisory-and-performance-claims_85921.html",
+        "publisher": "SEBI Enforcement & Media Division",
+        "publication_date": "2024-08-28",
+        "retrieval_date": "2026-11-09T15:09:40.934313+00:00",
+        "confidence_level": "verified",
+        "confidence_score": 9.6,
+        "evidence_type": "official_regulatory_data",
+        "relevant_audience_segment": "in_beginner_retail_investor",
+        "is_verified_fact": true,
+        "discovery_provider": "SEBI Regulatory Notices"
+      }
+    ],
+    "analysis": {
+      "country": "IN",
+      "insights": [
+        {
+          "category": "competitor_positioning",
+          "title": "Discount brokers focus on low-cost execution, while incumbents struggle with retention in emerging markets.",
+          "observed_evidence": [
+            "Zerodha faces challenges retaining Tier 2 and Tier 3 investors (The Economic Times, 2025-07-28).",
+            "The market has democratized access via smartphone-first discount brokers (NSE, 2024-03-31)."
+          ],
+          "ai_interpretation": "CrowdWisdom should position itself not just on low cost, but on *stickiness* and *value-add education* for the emerging Tier 2/3 segment, addressing the retention gap identified by Zerodha's leadership.",
+          "confidence": 0.92
+        },
+        {
+          "category": "common_marketing_hooks",
+          "title": "Digital accessibility and demystification are key hooks, not just low brokerage.",
+          "observed_evidence": [
+            "India has democratized market access, but not demystified market advantage (Moneycontrol, 2026-11-04).",
+            "Early trading involved complex paperwork, contrasting with modern digital ease (Trendlyne, 2025-10-10)."
+          ],
+          "ai_interpretation": "Marketing must pivot from 'low fees' to 'informed advantage.' The hook should be 'Clarity + Access,' directly addressing the knowledge gap post-democratization.",
+          "confidence": 0.88
+        },
+        {
+          "category": "customer_pain_points",
+          "title": "High risk exposure from speculation and lack of objective guidance.",
+          "observed_evidence": [
+            "89% of individual retail F&O traders incurred net losses, with average loss > \u20b91.1 lakh (SEBI, 2023-01-25).",
+            "Widespread financial manipulation via unauthorized Telegram/WhatsApp channels (SEBI, 2024-08-28)."
+          ],
+          "ai_interpretation": "The primary pain point is *financial loss due to misinformation/emotion*, not just platform usability. CrowdWisdom must be positioned as the *objective, regulated alternative* to risky finfluencers.",
+          "confidence": 0.99
+        },
+        {
+          "category": "value_propositions",
+          "title": "Shift from transactional access to educational, risk-managed decision support.",
+          "observed_evidence": [
+            "SEBI emphasizes the critical need for objective sentiment and risk management over emotional speculation (SEBI, 2023-01-25).",
+            "The next step for India is helping investors understand information and assess risks (Moneycontrol, 2026-11-04)."
+          ],
+          "ai_interpretation": "CrowdWisdom's core value proposition must be 'Evidence-Based Consensus'\u2014providing structured, objective sentiment (CrowdWisdom) to mitigate the high loss rates associated with emotional trading.",
+          "confidence": 0.97
+        },
+        {
+          "category": "audience_objections",
+          "title": "Skepticism towards 'guaranteed returns' and complexity of market understanding.",
+          "observed_evidence": [
+            "SEBI actions target unauthorized channels promising guaranteed returns (SEBI, 2024-08-28).",
+            "The market has democratized access but not demystified advantage (Moneycontrol, 2026-11-04)."
+          ],
+          "ai_interpretation": "Objections are rooted in fear of scams and fear of complexity. CrowdWisdom must explicitly *disclaim* guaranteed returns while *simplifying* complex market analysis into actionable, consensus-driven insights.",
+          "confidence": 0.95
+        },
+        {
+          "category": "content_strategies",
+          "title": "Focus on risk mitigation, objective analysis, and regulatory compliance, not just high returns.",
+          "observed_evidence": [
+            "SEBI mandates curbing unauthorized advisory and performance claims (SEBI, 2024-08-28).",
+            "The need is for objective sentiment and risk management (SEBI, 2023-01-25)."
+          ],
+          "ai_interpretation": "Content should be educational, analytical, and grounded in data (CrowdWisdom's strength), directly contrasting the hype/clickbait culture (Trendlyne, 2025-10-10). Avoid speculative language.",
+          "confidence": 0.98
+        },
+        {
+          "category": "market_opportunities",
+          "title": "Capturing the underserved, digitally-savvy Tier 2/3 investor seeking reliable knowledge.",
+          "observed_evidence": [
+            "Over 53% of incremental demat additions come from Tier 2, Tier 3, and smaller non-metro cities (NSE, 2024-03-31).",
+            "Zerodha notes retention challenges in these emerging segments (The Economic Times, 2025-07-28)."
+          ],
+          "ai_interpretation": "This segment is digitally ready but knowledge-poor and susceptible to bad advice. CrowdWisdom can win by being the trusted, objective knowledge layer *on top* of existing low-cost platforms.",
+          "confidence": 0.99
+        },
+        {
+          "category": "gaps_in_messaging",
+          "title": "Lack of trusted, objective, and regulated sentiment aggregation.",
+          "observed_evidence": [
+            "SEBI highlights the need for objective sentiment over emotional speculation (SEBI, 2023-01-25).",
+            "The market has democratized access but lacks demystified advantage (Moneycontrol, 2026-11-04)."
+          ],
+          "ai_interpretation": "Competitors offer access (low cost) or hype (finfluencers). The gap is *trusted, aggregated, non-biased insight*. CrowdWisdom must own the narrative of 'Data-Driven Consensus' as the antidote to market noise.",
+          "confidence": 0.96
+        }
+      ]
+    }
+  },
+  "PH": {
+    "country_name": "Philippines",
+    "evidence": [
+      {
+        "title": "What could the PSE change to get retail investors more excited about the PSE?",
+        "url": "https://balita.org/n/what-could-the-pse-change-to-get-retail/21802",
+        "text_sample": "What could the PSE change to get retail investors more excited about the PSE?\n\n 12.04.2024 - 01:13 / philstar.com \n\n# What could the PSE change to get retail investors more excited about the PSE?\n\nThank you to the record 216 readers who participated in this FSF survey and shared their suggestions fo",
+        "published_date": "2024-04-12",
+        "date_verification_status": "verified",
+        "source_tier": 5,
+        "source_tier_name": "General Web Sources",
+        "confidence_score": 3.57,
+        "staleness_factor": "aged_over_1_year"
+      },
+      {
+        "title": "Challenges Faced by Filipinos in Participating in the Stock Market",
+        "url": "https://doi.org/10.7753/ijsea1501.1004",
+        "text_sample": "# Challenges Faced by Filipinos in Participating in the Stock Market\n\nInternational Journal of Science and Engineering Applications. Published: 2026-01-01. 0 citations.\n\n## Topics\n\n- Financial Literacy and Behavior\n- Financial Literacy, Pension, Retirement Analysis\n- Financial Markets and Investment",
+        "published_date": "2026-01-01",
+        "date_verification_status": "verified",
+        "source_tier": 5,
+        "source_tier_name": "General Web Sources",
+        "confidence_score": 3.91,
+        "staleness_factor": "moderate_age_6_to_12_months"
+      },
+      {
+        "title": "SEC steps up investor education as digital investing expands | The Manila Times",
+        "url": "https://www.manilatimes.net/2026/11/09/business/top-business/sec-steps-up-investor-education-as-digital-investing-expands/2464801",
+        "text_sample": "SEC steps up investor education as digital investing expands | The Manila Times \n\n# SEC steps up investor education as digital investing expands \n\n By Nazylen Joy Mabanglo \n\n November 9, 2026 \n\nTHE Securities and Exchange Commission (SEC) is stepping up efforts to educate Filipino investors on legit",
+        "published_date": "2026-11-08",
+        "date_verification_status": "verified",
+        "source_tier": 5,
+        "source_tier_name": "General Web Sources",
+        "confidence_score": 4.2,
+        "staleness_factor": "fresh"
+      },
+      {
+        "title": "Analysts weigh impact of stock exchange\u2019s one-share trading rule - BusinessWorld Online",
+        "url": "https://bworldonline.com/corporate/2026/01/02/721873/analysts-weigh-impact-of-stock-exchanges-one-share-trading-rule/",
+        "text_sample": "Analysts weigh impact of stock exchange\u2019s one-share trading rule - BusinessWorld Online\n\n# Analysts weigh impact of stock exchange\u2019s one-share trading rule\n\n January 2, 2026 | 12:02 am \n\nREUTERS\n\nBy Alexandria Grace C. Magno\n\nTHE Philippine Stock Exchange\u2019s (PSE) proposal to adopt a one-share board ",
+        "published_date": "2026-01-01",
+        "date_verification_status": "verified",
+        "source_tier": 2,
+        "source_tier_name": "Tier-1 Financial Media & Institutional Reporting",
+        "confidence_score": 8.18,
+        "staleness_factor": "moderate_age_6_to_12_months"
+      },
+      {
+        "title": "Trading Ads in Philippines \u2013 Spy on Competitor Creatives",
+        "url": "https://adligator.com/spy/trading/philippines",
+        "text_sample": "Trading Ads in Philippines \u2013 Spy on Competitor Creatives\n\n# Trading Ads That Are Scaling Right Now in Philippines\n\nExplore trading ad creatives targeting Philippines. See what competitors are running in this market and identify the creative strategies that drive results locally.\n\n1M+ Marketers track",
+        "published_date": null,
+        "date_verification_status": "unverified",
+        "source_tier": 5,
+        "source_tier_name": "General Web Sources",
+        "confidence_score": 3.78,
+        "staleness_factor": "undated"
+      }
+    ],
+    "benchmarks": [
+      {
+        "country": "PH",
+        "topic": "retail stock market democratization via fintech",
+        "finding": "The Philippine Stock Exchange (PSE) reported online trading accounts reaching 1.9+ million, driven by mobile integrations such as GStocks (GCash) and Maya Stocks, dramatically lowering barriers to entry for millions of mobile wallet users across Luzon, Visayas, and Mindanao.",
+        "source_url": "https://www.pse.com.ph/stock-market-investor-profile-report/",
+        "publisher": "Philippine Stock Exchange (PSE)",
+        "publication_date": "2023-11-15",
+        "retrieval_date": "2026-11-09T15:10:04.844998+00:00",
+        "confidence_level": "verified",
+        "confidence_score": 9.8,
+        "evidence_type": "official_exchange_data",
+        "relevant_audience_segment": "ph_young_fintech_professional",
+        "is_verified_fact": true,
+        "discovery_provider": "PSE Investor Profile Data"
+      },
+      {
+        "country": "PH",
+        "topic": "overseas filipino worker remittances & wealth allocation",
+        "finding": "Bangko Sentral ng Pilipinas (BSP) recorded overseas Filipino worker (OFW) cash remittances exceeding $37 billion annually. Growing financial literacy drives OFWs to allocate portions of earnings into Philippine dividend REITs and blue chips rather than solely low-interest savings.",
+        "source_url": "https://www.bsp.gov.ph/SitePages/MediaAndResearch/EconomicFinancialStatistics.aspx",
+        "publisher": "Bangko Sentral ng Pilipinas (BSP)",
+        "publication_date": "2024-02-15",
+        "retrieval_date": "2026-11-09T15:10:04.844998+00:00",
+        "confidence_level": "verified",
+        "confidence_score": 9.7,
+        "evidence_type": "central_bank_economic_data",
+        "relevant_audience_segment": "ph_ofw_wealth_builder",
+        "is_verified_fact": true,
+        "discovery_provider": "BSP Official Statistics"
+      },
+      {
+        "country": "PH",
+        "topic": "regulatory advisory enforcement & scam prevention",
+        "finding": "SEC Philippines issued repeated public advisories warning retail investors against unregistered foreign trading platforms and unlicensed social media groups soliciting investments under false promises of guaranteed returns without SRC registration.",
+        "source_url": "https://www.sec.gov.ph/investors-education-and-information/advisories/",
+        "publisher": "Securities and Exchange Commission of the Philippines (SEC)",
+        "publication_date": "2024-01-20",
+        "retrieval_date": "2026-11-09T15:10:04.844998+00:00",
+        "confidence_level": "verified",
+        "confidence_score": 9.6,
+        "evidence_type": "official_regulatory_data",
+        "relevant_audience_segment": "ph_active_equity_trader",
+        "is_verified_fact": true,
+        "discovery_provider": "SEC Philippines Enforcement Notices"
+      }
+    ],
+    "analysis": {
+      "country": "PH",
+      "insights": [
+        {
+          "category": "competitor_positioning",
+          "title": "Fintech Wallets (GCash/Maya) dominate accessibility, while traditional brokers maintain institutional trust.",
+          "observed_evidence": [
+            "PSE reports 1.9+ million online trading accounts driven by mobile integrations like GStocks (GCash) and Maya Stocks (PSE, 2023-11-15).",
+            "Traditional brokers (COL, First Metro, BDO) are established but face competition from seamless mobile UX offered by fintech partners."
+          ],
+          "ai_interpretation": "CrowdWisdom must position itself as superior to basic wallet integration\u2014offering deeper analysis or community intelligence beyond simple execution. Competing on ease-of-use alone is insufficient; value-add intelligence is key.",
+          "confidence": 0.92
+        },
+        {
+          "category": "common_marketing_hooks",
+          "title": "Accessibility, Simplicity, and OFW Wealth Growth are primary motivators.",
+          "observed_evidence": [
+            "The rise of mobile trading via GCash/Maya demonstrates a strong preference for mobile accessibility among younger Filipinos (PSE, 2023-11-15).",
+            "BSP data shows OFWs are shifting earnings into dividend REITs and blue chips, indicating a focus on stable, wealth-building returns (BSP, 2024-02-15)."
+          ],
+          "ai_interpretation": "Marketing should blend 'easy entry' (mobile-friendly) with 'serious wealth building' (REITs/Blue Chips), specifically targeting the OFW demographic with ROI narratives, not just quick gains.",
+          "confidence": 0.95
+        },
+        {
+          "category": "customer_pain_points",
+          "title": "Lack of financial literacy and fear of scams are major barriers to sustained participation.",
+          "observed_evidence": [
+            "Research highlights 'Financial Literacy and Behavior' as a key challenge in Filipino stock market participation (IJSEA, 2026-01-01).",
+            "SEC issues repeated advisories against unregistered foreign platforms and false promises of guaranteed returns (SEC, 2024-01-20)."
+          ],
+          "ai_interpretation": "Customers are hesitant due to knowledge gaps and regulatory risk. CrowdWisdom must proactively address education and security, positioning itself as a *trusted, regulated* intelligence source, not just a trading tool.",
+          "confidence": 0.98
+        },
+        {
+          "category": "value_propositions",
+          "title": "Crowd-driven insight combined with regulatory compliance offers a unique safety net.",
+          "observed_evidence": [
+            "SEC emphasizes investor education and legitimacy checks against unregulated platforms (SEC, 2024-01-20).",
+            "The market is moving towards democratization (one-share trading rule discussed by PSE, 2026-01-01), lowering entry friction."
+          ],
+          "ai_interpretation": "CrowdWisdom's value proposition should be: 'Democratized access *with* verified, community-vetted intelligence, mitigating the risk of scams prevalent in the market.' This bridges low barrier entry with high trust.",
+          "confidence": 0.94
+        },
+        {
+          "category": "audience_objections",
+          "title": "Skepticism regarding guaranteed returns and complexity of local markets.",
+          "observed_evidence": [
+            "SEC warnings specifically target 'false promises of guaranteed returns' (SEC, 2024-01-20).",
+            "General market discussions indicate a need for PSE changes to 'get retail investors more excited' (Balita.org, 2024-04-12), suggesting current offerings are not sufficiently engaging."
+          ],
+          "ai_interpretation": "Directly counter 'guaranteed returns' claims. Instead, focus on *probability* and *consensus* derived from the crowd. Address complexity by simplifying complex data into actionable, digestible insights relevant to PSEi and REITs.",
+          "confidence": 0.96
+        },
+        {
+          "category": "content_strategies",
+          "title": "Educational content focused on risk management and local asset classes performs best.",
+          "observed_evidence": [
+            "SEC is actively stepping up investor education regarding digital investing (Manila Times, 2026-11-08).",
+            "BSP data highlights interest in Philippine Dividend REITs and blue chips, not just volatile global assets (BSP, 2024-02-15)."
+          ],
+          "ai_interpretation": "Content must be educational (SEC alignment) but highly localized. Create case studies on successful PSEi/REIT investments, framed around risk mitigation, not just profit maximization. Use the 'how to avoid scams' angle as a lead magnet.",
+          "confidence": 0.93
+        },
+        {
+          "category": "market_opportunities",
+          "title": "Bridging the gap between high mobile adoption and low financial literacy via trusted aggregation.",
+          "observed_evidence": [
+            "Mobile trading adoption is high (1.9M+ accounts via GCash/Maya) (PSE, 2023-11-15).",
+            "There is a clear regulatory push for education (SEC, 2024-01-20) but a gap in accessible, non-biased, crowd-sourced education."
+          ],
+          "ai_interpretation": "CrowdWisdom can capture the mobile-first user who is *ready* to trade but *unready* to trust a single broker or unverified social media advice. Offer intelligence *before* the trade, leveraging the existing mobile ecosystem's reach.",
+          "confidence": 0.97
+        },
+        {
+          "category": "gaps_in_messaging",
+          "title": "Lack of messaging that combines 'local relevance' (PSE/REITs) with 'modern intelligence' (CrowdWisdom).",
+          "observed_evidence": [
+            "Market focus is split between local PSE excitement (Balita.org, 2024-04-12) and global fintech adoption (PSE, 2023-11-15).",
+            "Existing competitor ads are tracked but specific, high-converting messaging linking local assets to crowd intelligence is not evident (Adligator, undated)."
+          ],
+          "ai_interpretation": "Do not just compete on 'easy trading' (fintechs) or 'local stock news' (traditional media). Message must be: 'Smart, crowd-validated insights for the Philippine market (PSEi/REITs), built for your mobile life, safely within SEC guidelines.'",
+          "confidence": 0.91
+        }
+      ]
+    }
+  }
+}

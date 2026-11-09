@@ -116,7 +116,15 @@ class LLMClient:
     ) -> str:
         """Send a chat completion request and return the response text."""
         if self.provider == "gemini":
-            return await self._chat_gemini(messages, temperature, max_tokens, response_format)
+            try:
+                return await self._chat_gemini(messages, temperature, max_tokens, response_format)
+            except Exception as gemini_err:
+                from config import settings
+                if settings.NVIDIA_NIM_API_KEY:
+                    logger.warning(f"Gemini call encountered error ({gemini_err}). Seamlessly falling back to NVIDIA NIM...")
+                    nim_client = LLMClient(api_key=settings.NVIDIA_NIM_API_KEY, provider="nvidia_nim")
+                    return await nim_client.chat(messages, temperature, max_tokens, response_format)
+                raise
 
         payload: Dict[str, Any] = {
             "model": self.model,

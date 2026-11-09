@@ -197,3 +197,4 @@ def get_india_market_profile() -> Dict[str, Any]:
     """Returns a deep copy of the India Market Profile."""
     import copy
     return copy.deepcopy(INDIA_MARKET_PROFILE)
+

@@ -220,6 +220,12 @@ export interface Advertisement {
   advertiser: string
   ad_text?: string
   creative_reference?: string
+  cta?: string
+  creative_format?: string
+  active_status?: string
+  targeting_evidence?: Record<string, any>
+  data_source?: string
+  is_benchmark?: boolean
   first_seen?: string
   last_seen?: string
   published_at?: string
@@ -234,6 +240,8 @@ export interface Advertisement {
   marketing_angle?: string
   pain_point?: string
   hook?: string
+  observed_facts?: string[]
+  ai_interpretation?: Record<string, any>
   evaluation_score?: AdEvaluationScore
   created_at: string
 }
@@ -242,10 +250,12 @@ export interface MarketingInsight {
   id: string
   campaign_id: string
   research_job_id?: string
-  category: 'pain_point' | 'angle' | 'hook' | 'audience' | 'competitor' | 'pattern'
+  category: 'competitor_positioning' | 'common_marketing_hooks' | 'customer_pain_points' | 'value_propositions' | 'audience_objections' | 'content_strategies' | 'market_opportunities' | 'gaps_in_messaging' | 'pain_point' | 'angle' | 'hook' | 'audience' | 'competitor' | 'pattern' | string
   title: string
   description: string
   evidence: string[]
+  observed_evidence?: string[]
+  ai_interpretation?: string
   source_ad_ids?: string[]
   confidence: number
   created_at: string

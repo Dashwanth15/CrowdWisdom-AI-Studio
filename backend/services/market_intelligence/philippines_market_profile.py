@@ -189,3 +189,4 @@ def get_philippines_market_profile() -> Dict[str, Any]:
     """Returns a deep copy of the Philippines Market Profile."""
     import copy
     return copy.deepcopy(PHILIPPINES_MARKET_PROFILE)
+

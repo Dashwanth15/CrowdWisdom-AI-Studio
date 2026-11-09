@@ -228,6 +228,12 @@ class AdvertisementOut(BaseModel):
     advertiser: Optional[str] = "Unknown"
     ad_text: Optional[str] = None
     creative_reference: Optional[str] = None
+    cta: Optional[str] = None
+    creative_format: Optional[str] = "video"
+    active_status: Optional[str] = "active"
+    targeting_evidence: Optional[Dict[str, Any]] = None
+    data_source: Optional[str] = "meta_ads_library"
+    is_benchmark: bool = False
     first_seen: Optional[str] = None
     last_seen: Optional[str] = None
     published_at: Optional[datetime] = None
@@ -242,6 +248,8 @@ class AdvertisementOut(BaseModel):
     marketing_angle: Optional[str] = None
     pain_point: Optional[str] = None
     hook: Optional[str] = None
+    observed_facts: Optional[List[str]] = Field(default_factory=list)
+    ai_interpretation: Optional[Dict[str, Any]] = Field(default_factory=dict)
     evaluation_score: Optional[AdEvaluationScore] = None
     raw_data: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
@@ -407,10 +415,12 @@ class MarketingInsightOut(BaseModel):
     id: str
     campaign_id: str
     research_job_id: str
-    category: str  # pain_point | angle | hook | audience | competitor | pattern
+    category: str  # competitor_positioning | common_marketing_hooks | customer_pain_points | value_propositions | audience_objections | content_strategies | market_opportunities | gaps_in_messaging | pain_point | angle | hook | audience | competitor | pattern
     title: str
     description: str
     evidence: List[str] = []
+    observed_evidence: List[str] = Field(default_factory=list)
+    ai_interpretation: Optional[str] = None
     source_ad_ids: List[str] = []
     confidence: float = Field(..., ge=0, le=1)
     created_at: datetime

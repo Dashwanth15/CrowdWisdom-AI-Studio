@@ -152,3 +152,4 @@ class MarketComplianceValidator:
 
 
 compliance_validator = MarketComplianceValidator()
+

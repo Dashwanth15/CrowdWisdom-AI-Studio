@@ -164,6 +164,48 @@ class TestMarketResearchService:
         ev2 = await market_research_service.get_market_research_evidence("IN", "cache_test_topic")
         assert len(ev1) == len(ev2)
 
+    def test_calculate_source_quality_tier1_regulator(self):
+        res = market_research_service.calculate_source_quality(
+            url="https://www.sebi.gov.in/reports-and-statistics/research/study.html",
+            raw_publication_date="2026-01-15",
+            is_benchmark=True,
+        )
+        assert res["tier"] == 1
+        assert res["tier_name"] == "Official Regulators & Central Exchanges"
+        assert res["final_score"] >= 9.5
+        assert res["date_verification_status"] == "verified"
+
+    def test_calculate_source_quality_tier2_financial_press(self):
+        res = market_research_service.calculate_source_quality(
+            url="https://www.livemint.com/market/retail-investor-sentiment",
+            raw_publication_date="2026-10-01",
+        )
+        assert res["tier"] == 2
+        assert res["confidence_level"] == "high"
+        assert res["final_score"] >= 8.5
+
+    def test_calculate_source_quality_staleness_penalty(self):
+        fresh = market_research_service.calculate_source_quality(
+            url="https://www.livemint.com/news",
+            raw_publication_date="2026-11-01",
+        )
+        aged = market_research_service.calculate_source_quality(
+            url="https://www.livemint.com/news",
+            raw_publication_date="2024-01-01",
+        )
+        assert aged["final_score"] < fresh["final_score"]
+        assert aged["staleness_factor"] == "aged_over_1_year"
+
+    def test_calculate_source_quality_unverified_date(self):
+        res = market_research_service.calculate_source_quality(
+            url="https://hawky.ai/ad-gallery/angel-one",
+            raw_publication_date=None,
+        )
+        assert res["tier"] == 3
+        assert res["publication_date"] is None
+        assert res["date_verification_status"] == "unverified"
+        assert res["staleness_factor"] == "undated"
+
 
 class TestMarketContextBuilder:
     """Verifies contextual synthesis and prompt directive generation."""

@@ -94,8 +94,9 @@ class MarketResearchService:
         return live_evidence[:limit]
 
     async def _execute_live_research(self, country: str, topic: str) -> List[Dict[str, Any]]:
-        """Queries Tavily and Exa for real-time market research."""
+        """Queries Tavily and Exa for real-time market research with deduplication and source scoring."""
         evidence_list: List[Dict[str, Any]] = []
+        seen_urls: set = set()
         now_str = datetime.now(timezone.utc).isoformat()
 
         # Load API keys (safe against closed test event loops / db offline)
@@ -119,14 +120,20 @@ class MarketResearchService:
                 for q in search_queries[:2]:
                     resp = await tavily.search(q, max_results=4, days=60)
                     for res in resp.get("results", []):
+                        url = res.get("url", "")
+                        canon = url.split("?")[0].rstrip("/").lower()
+                        if not url or canon in seen_urls:
+                            continue
+                        seen_urls.add(canon)
                         parsed_record = self._build_evidence_record(
                             country=country,
                             topic=topic,
                             raw_title=res.get("title", ""),
                             raw_content=res.get("content", ""),
-                            url=res.get("url", ""),
+                            url=url,
                             provider="Tavily",
                             retrieval_date=now_str,
+                            raw_publication_date=res.get("published_date"),
                         )
                         if parsed_record:
                             evidence_list.append(parsed_record)
@@ -138,16 +145,23 @@ class MarketResearchService:
             try:
                 exa = ExaClient(exa_key)
                 for q in search_queries[:1]:
-                    resp = await exa.search(f"{country_name} retail trading {topic}", num_results=4)
+                    resp = await exa.search(f"{country_name} retail trading {topic}", num_results=6)
                     for res in resp.get("results", []):
+                        url = res.get("url", "")
+                        canon = url.split("?")[0].rstrip("/").lower()
+                        if not url or canon in seen_urls:
+                            continue
+                        seen_urls.add(canon)
                         parsed_record = self._build_evidence_record(
                             country=country,
                             topic=topic,
                             raw_title=res.get("title", ""),
                             raw_content=res.get("text", "") or res.get("snippet", ""),
-                            url=res.get("url", ""),
+                            url=url,
                             provider="Exa",
                             retrieval_date=now_str,
+                            raw_publication_date=res.get("publishedDate") or res.get("date"),
+                            author=res.get("author"),
                         )
                         if parsed_record:
                             evidence_list.append(parsed_record)
@@ -172,6 +186,117 @@ class MarketResearchService:
             ]
         return [f"{country} retail trading financial market {topic}"]
 
+    def calculate_source_quality(
+        self,
+        url: str,
+        publisher: Optional[str] = None,
+        raw_publication_date: Optional[str] = None,
+        is_benchmark: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Computes an objective 5-tier source-quality and evidence-confidence evaluation:
+        - Tier 1 (1.0 / 9.5-10.0): Official Regulators & Exchanges (sebi.gov.in, nseindia.com, bseindia.com, sec.gov.ph, pse.com.ph, bsp.gov.ph, rbi.org.in)
+        - Tier 2 (0.85 / 8.5-9.4): Tier-1 Financial Media (livemint.com, thehindubusinessline.com, bworldonline.com, philstar.com, rappler.com, reuters.com, bloomberg.com, economictimes.indiatimes.com, cnbctv18.com, cnbc.com, financialexpress.com, inquirer.net, businessmirror.com.ph)
+        - Tier 3 (0.70 / 7.0-8.4): Industry Portals & Broker Platforms (hawky.ai, smartpinoyinvestor.com, insiderph.com, bullsmart.in, moneycontrol.com, investagrams.com, zerodha.com, angelone.in, colfinancial.com)
+        - Tier 4 (0.50 / 5.0-6.9): Community & Professional Discussions (linkedin.com, reddit.com, quora.com, tradingview.com, facebook.com)
+        - Tier 5 (0.30 / 3.0-4.9): General / Unverified Web Sources
+        """
+        domain = urlparse(url).netloc.replace("www.", "").lower() if url else ""
+
+        tier1_domains = [
+            "sebi.gov.in", "sec.gov.ph", "nseindia.com", "bseindia.com", "pse.com.ph", "bsp.gov.ph", "rbi.org.in"
+        ]
+        tier2_domains = [
+            "livemint.com", "thehindubusinessline.com", "bworldonline.com", "philstar.com", "rappler.com",
+            "reuters.com", "bloomberg.com", "economictimes.indiatimes.com", "cnbctv18.com", "cnbc.com",
+            "financialexpress.com", "inquirer.net", "businessmirror.com.ph", "wsj.com", "ft.com"
+        ]
+        tier3_domains = [
+            "hawky.ai", "smartpinoyinvestor.com", "insiderph.com", "bullsmart.in", "moneycontrol.com",
+            "investagrams.com", "zerodha.com", "angelone.in", "groww.in", "colfinancial.com", "firstmetrosec.com.ph"
+        ]
+        tier4_domains = [
+            "linkedin.com", "reddit.com", "quora.com", "tradingview.com", "facebook.com", "youtube.com"
+        ]
+
+        if any(d in domain for d in tier1_domains) or is_benchmark:
+            tier = 1
+            tier_name = "Official Regulators & Central Exchanges"
+            base_score = 9.8
+            confidence = "verified"
+            evidence_type = "official_regulatory_data"
+        elif any(d in domain for d in tier2_domains):
+            tier = 2
+            tier_name = "Tier-1 Financial Media & Institutional Reporting"
+            base_score = 8.8
+            confidence = "high"
+            evidence_type = "financial_journalism"
+        elif any(d in domain for d in tier3_domains):
+            tier = 3
+            tier_name = "Industry Portals & Broker Platforms"
+            base_score = 7.5
+            confidence = "moderate"
+            evidence_type = "industry_analysis"
+        elif any(d in domain for d in tier4_domains):
+            tier = 4
+            tier_name = "Community & Professional Discussions"
+            base_score = 5.8
+            confidence = "low"
+            evidence_type = "community_sentiment"
+        else:
+            tier = 5
+            tier_name = "General Web Sources"
+            base_score = 4.2
+            confidence = "low"
+            evidence_type = "unverified_web"
+
+        # Parse publication date and calculate staleness factor
+        pub_date = None
+        date_status = "unverified"
+        staleness_penalty = 1.0
+        staleness_factor = "fresh"
+
+        if raw_publication_date:
+            try:
+                # Handle ISO formats e.g. 2025-08-29T00:00:00.000Z or 2026-05-21
+                clean_date_str = raw_publication_date[:10]
+                dt = datetime.strptime(clean_date_str, "%Y-%m-%d")
+                pub_date = clean_date_str
+                date_status = "verified"
+                now = datetime.now()
+                days_old = (now - dt).days
+
+                if not is_benchmark:
+                    if days_old > 365:
+                        staleness_penalty = 0.85
+                        staleness_factor = "aged_over_1_year"
+                    elif days_old > 180:
+                        staleness_penalty = 0.93
+                        staleness_factor = "moderate_age_6_to_12_months"
+            except Exception:
+                pub_date = None
+                date_status = "unverified"
+                staleness_penalty = 0.90
+                staleness_factor = "undated"
+        else:
+            staleness_penalty = 0.90
+            staleness_factor = "undated"
+
+        final_score = round(base_score * staleness_penalty, 2)
+
+        return {
+            "tier": tier,
+            "tier_name": tier_name,
+            "base_score": base_score,
+            "final_score": final_score,
+            "confidence_level": confidence,
+            "evidence_type": evidence_type,
+            "publication_date": pub_date,
+            "date_verification_status": date_status,
+            "staleness_factor": staleness_factor,
+            "domain": domain,
+        }
+
     def _build_evidence_record(
         self,
         country: str,
@@ -181,38 +306,23 @@ class MarketResearchService:
         url: str,
         provider: str,
         retrieval_date: str,
+        raw_publication_date: Optional[str] = None,
+        author: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Parses and structures an evidence item with confidence rating and source domain."""
+        """Parses and structures an evidence item with objective 5-tier scoring and attribution."""
         if not url or not raw_content:
             return None
 
-        domain = urlparse(url).netloc.replace("www.", "")
         finding = raw_content[:350].strip()
         if raw_title and not finding.startswith(raw_title):
             finding = f"{raw_title}: {finding}"
 
-        # Assign confidence rating based on publisher credibility
-        high_credibility_domains = [
-            "sebi.gov.in", "sec.gov.ph", "nseindia.com", "bseindia.com", "pse.com.ph",
-            "bloomberg.com", "reuters.com", "economictimes.indiatimes.com", "livemint.com",
-            "businessmirror.com.ph", "bworldonline.com", "rappler.com", "inquirer.net"
-        ]
-
-        is_verified_gov_or_exchange = any(d in domain for d in ["sebi.gov.in", "sec.gov.ph", "nseindia.com", "pse.com.ph"])
-        is_major_financial_press = any(d in domain for d in high_credibility_domains)
-
-        if is_verified_gov_or_exchange:
-            confidence = "verified"
-            conf_score = 9.8
-            evidence_type = "official_regulatory_data"
-        elif is_major_financial_press:
-            confidence = "high"
-            conf_score = 8.5
-            evidence_type = "financial_journalism"
-        else:
-            confidence = "moderate"
-            conf_score = 7.0
-            evidence_type = "industry_analysis"
+        scoring = self.calculate_source_quality(
+            url=url,
+            publisher=author or provider,
+            raw_publication_date=raw_publication_date,
+            is_benchmark=False,
+        )
 
         audience_segment = "in_options_derivative_trader" if country == "IN" else "ph_active_equity_trader"
 
@@ -221,14 +331,18 @@ class MarketResearchService:
             "topic": topic,
             "finding": finding,
             "source_url": url,
-            "publisher": domain or provider,
-            "publication_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "publisher": author or scoring["domain"] or provider,
+            "publication_date": scoring["publication_date"],
+            "date_verification_status": scoring["date_verification_status"],
             "retrieval_date": retrieval_date,
-            "confidence_level": confidence,
-            "confidence_score": conf_score,
-            "evidence_type": evidence_type,
+            "confidence_level": scoring["confidence_level"],
+            "confidence_score": scoring["final_score"],
+            "source_tier": scoring["tier"],
+            "source_tier_name": scoring["tier_name"],
+            "staleness_factor": scoring["staleness_factor"],
+            "evidence_type": scoring["evidence_type"],
             "relevant_audience_segment": audience_segment,
-            "is_verified_fact": is_verified_gov_or_exchange or is_major_financial_press,
+            "is_verified_fact": scoring["tier"] <= 2 and scoring["date_verification_status"] == "verified",
             "discovery_provider": provider,
         }
 

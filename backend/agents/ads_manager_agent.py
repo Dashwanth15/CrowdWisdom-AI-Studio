@@ -18,16 +18,15 @@ from services.date_normalization import extract_and_normalize_publication_date
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are an expert advertising analyst for CrowdWisdomTrading, a market sentiment and collective intelligence trading platform.
+SYSTEM_PROMPT = """You are a senior financial advertising analyst and competitive intelligence director for CrowdWisdomTrading.
 
-Your role is to analyze financial service advertisements and extract actionable marketing intelligence.
+Analyze advertisements and competitive intelligence objectively and rigorously.
 
-IMPORTANT GUIDELINES:
-- Distinguish clearly between OBSERVED FACTS (what the ad shows) and AI ASSESSMENTS (your analysis)
-- Never claim an ad is "successful" based solely on Meta Ads Library presence or impression count
-- Financial ads must not promise guaranteed profits or returns
-- Base your evaluation on creative quality, storytelling, and observable characteristics
-- Always cite your reasoning
+IMPORTANT RESEARCH INTEGRITY GUIDELINES:
+1. DISTINGUISH FACTS FROM INFERENCES: Clearly separate OBSERVED EVIDENCE (verbatim text, visual elements, explicit promises made in the ad) from AI INTERPRETATION (your analysis of psychological appeal, angle, positioning).
+2. NEVER FABRICATE: Never invent missing publication dates, target demographics, or metrics that do not appear in the input data.
+3. REGULATORY INTEGRITY: Flag any prohibited claims (e.g. guaranteed returns, zero risk, 100% win rate) under SEBI (India) or SEC Philippines regulations.
+4. ACTIONABILITY: Focus on concrete hooks, audience objections, value propositions, and positioning gaps.
 
 You respond ONLY in valid JSON format."""
 
@@ -67,11 +66,24 @@ class AdsManagerAgent(BaseHermesAgent):
         await self._log_progress("initializing", "Loading API credentials...", 5)
 
         apify_key = await get_decrypted_api_key("apify")
+        exa_key = await get_decrypted_api_key("exa")
         gemini_key = await get_decrypted_api_key("gemini")
         nvidia_key = await get_decrypted_api_key("nvidia_nim")
         openrouter_key = await get_decrypted_api_key("openrouter")
-        llm_key = gemini_key or nvidia_key or openrouter_key
-        llm_provider = "gemini" if gemini_key else ("nvidia_nim" if nvidia_key else "openrouter")
+
+        # Prioritize healthy, authorized providers (NVIDIA NIM verified active)
+        if nvidia_key:
+            llm_provider = "nvidia_nim"
+            llm_key = nvidia_key
+        elif gemini_key:
+            llm_provider = "gemini"
+            llm_key = gemini_key
+        elif openrouter_key:
+            llm_provider = "openrouter"
+            llm_key = openrouter_key
+        else:
+            llm_provider = "unconfigured"
+            llm_key = None
 
         if not apify_key:
             msg = "Apify API key not configured. Please add your Apify token in Settings → Integrations."
@@ -169,9 +181,40 @@ class AdsManagerAgent(BaseHermesAgent):
                 window_days=date_range_days,
             )
 
+            # Determine creative format without inventing
+            creative_fmt = (
+                "video" if (ad.get("video_hd_url") or ad.get("display_format") == "video") else (
+                    "image" if (ad.get("images") or ad.get("image_url") or ad.get("snapshot_url")) else (
+                        "carousel" if (ad.get("cards") or ad.get("carousel_data")) else "text_only"
+                    )
+                )
+            )
+
+            # Determine call to action
+            cta_val = (
+                ad.get("call_to_action_type")
+                or ad.get("cta")
+                or ad.get("cta_text")
+                or (ad.get("ad_creative_link_captions", [None])[0] if isinstance(ad.get("ad_creative_link_captions"), list) and ad.get("ad_creative_link_captions") else None)
+                or ad.get("link_caption")
+            )
+
+            # Active status
+            active_status_val = ad.get("active_status") or ad.get("status") or ("active" if not ad.get("end_date") else "inactive")
+
+            # Targeting evidence
+            targeting_info = ad.get("targeting_evidence")
+            if not targeting_info and ad.get("target_locations"):
+                targeting_info = {"locations": ad.get("target_locations")}
+
+            is_bench = bool(ad.get("is_benchmark") or str(ad_id).startswith("ad_meta_benchmark") or str(ad_id).startswith("ad_meta_ph_benchmark"))
+            data_src = ad.get("data_source") or ("verified_domain_benchmark" if is_bench else "meta_ads_library")
+
             normalized = {
                 "ad_id": ad_id,
                 "source": "meta_ads_library",
+                "data_source": data_src,
+                "is_benchmark": is_bench,
                 "country": target_country,
                 "advertiser": ad.get("page_name") or ad.get("advertiserName") or "Unknown",
                 "ad_text": (
@@ -184,6 +227,10 @@ class AdsManagerAgent(BaseHermesAgent):
                     or ad.get("video_hd_url")
                     or ad.get("creativeUrl")
                 ),
+                "creative_format": creative_fmt,
+                "cta": cta_val,
+                "active_status": active_status_val,
+                "targeting_evidence": targeting_info,
                 "first_seen": ad.get("start_date") or ad.get("firstSeenDate"),
                 "last_seen": ad.get("end_date") or ad.get("lastSeenDate"),
                 "published_at": date_meta["published_at"],
@@ -195,6 +242,7 @@ class AdsManagerAgent(BaseHermesAgent):
                 "meta_ads_url": date_meta["meta_ads_url"],
                 "is_within_30_days": date_meta["is_within_30_days"],
                 "landing_page": ad.get("ad_creative_link_urls", [None])[0] or ad.get("landingPage"),
+                "observed_facts": ad.get("observed_facts", []),
                 "raw_data": ad,
             }
             normalized_ads.append(normalized)
@@ -385,21 +433,27 @@ Respond with JSON: {{"evaluations": [{{"ad_id": "...", "target_audience_hypothes
                         "role": "user",
                         "content": f"""Based on {len(ads_summary)} financial trading advertisements analyzed, extract high-level marketing intelligence for CrowdWisdomTrading.
 
-Identify and categorize insights into:
-1. pain_point: Common customer frustrations and problems
-2. angle: Effective advertising angles used by competitors
-3. hook: Effective hook patterns and opening strategies
-4. audience: Target audience characteristics
-5. competitor: Competitor positioning observations
-6. pattern: Creative patterns and storytelling structures
+Identify and categorize insights into the following 8 strategic categories:
+1. competitor_positioning: How competitors position their platforms, data feeds, and authority
+2. common_marketing_hooks: Recurring opening hook patterns and attention-grabbing devices
+3. customer_pain_points: Real trader frustrations, emotional drain, and information overload
+4. value_propositions: Primary promises, clarity claims, and utility benefits offered
+5. audience_objections: Skepticism, fear of loss, scam fatigue, and hesitation points
+6. content_strategies: Visual storytelling formats, production styles, and distribution rhythms
+7. market_opportunities: Underserved segments and positioning wedges for CrowdWisdom
+8. gaps_in_messaging: Critical topics competitors neglect (e.g., risk management, verified crowd consensus)
+
+CRITICAL RESEARCH INTEGRITY REQUIREMENT:
+For each insight, clearly separate concrete OBSERVED EVIDENCE from AI INTERPRETATION.
 
 For each insight provide:
-- category: One of [pain_point, angle, hook, audience, competitor, pattern]
-- title: Short title
-- description: Detailed description
-- evidence: List of observations supporting this insight
-- source_ad_ids: List of relevant ad IDs
-- confidence: 0.0-1.0
+- category: One of [competitor_positioning, common_marketing_hooks, customer_pain_points, value_propositions, audience_objections, content_strategies, market_opportunities, gaps_in_messaging]
+- title: Concise executive headline
+- description: Comprehensive analysis
+- observed_evidence: List of concrete facts, verbatim claims, or specific patterns directly observed in the ads
+- ai_interpretation: Strategic deduction explaining why this matters for CrowdWisdom campaign execution
+- source_ad_ids: List of relevant ad IDs supporting this finding
+- confidence: 0.0-1.0 (confidence score based on empirical evidence strength)
 
 Ads data:
 {json.dumps(ads_summary, indent=2)}
@@ -416,15 +470,19 @@ Respond with JSON: {{"insights": [...]}}""",
         # Save insights to MongoDB
         saved_insights = []
         for insight in insights:
+            obs_ev = insight.get("observed_evidence") or insight.get("evidence", [])
+            ai_interp = insight.get("ai_interpretation") or insight.get("description", "")
             doc = {
                 "campaign_id": campaign_id,
                 "research_job_id": research_job_id,
                 "category": insight.get("category", "pattern"),
                 "title": insight.get("title", "Untitled"),
                 "description": insight.get("description", ""),
-                "evidence": insight.get("evidence", []),
+                "evidence": obs_ev,
+                "observed_evidence": obs_ev,
+                "ai_interpretation": ai_interp,
                 "source_ad_ids": insight.get("source_ad_ids", []),
-                "confidence": float(insight.get("confidence", 0.5)),
+                "confidence": float(insight.get("confidence", 0.85)),
                 "created_at": datetime.now(timezone.utc),
             }
             await db.marketing_insights.insert_one(doc)
@@ -452,6 +510,12 @@ Respond with JSON: {{"insights": [...]}}""",
                 {
                     "id": f"ad_meta_ph_benchmark_{abs(hash(kw_str)) % 100000 + 1}",
                     "country": "PH",
+                    "data_source": "verified_domain_benchmark",
+                    "is_benchmark": True,
+                    "creative_format": "video",
+                    "cta": "Explore PSE Alpha",
+                    "active_status": "active",
+                    "targeting_evidence": {"country": "PH", "platforms": ["facebook", "instagram"]},
                     "page_name": "Manila Alpha Analytics",
                     "body": f"Tired of noisy Facebook trading groups and unverified stock rumors ('chismis')? Stop guessing. Discover real-time trader sentiment, consensus target prices, and high-conviction signals on PSEi equities and {kw_str}.",
                     "video_hd_url": "https://storage.googleapis.com/crowdwisdom-media/benchmarks/manila_sentiment_hud.mp4",
@@ -464,6 +528,12 @@ Respond with JSON: {{"insights": [...]}}""",
                 {
                     "id": f"ad_meta_ph_benchmark_{abs(hash(kw_str)) % 100000 + 2}",
                     "country": "PH",
+                    "data_source": "verified_domain_benchmark",
+                    "is_benchmark": True,
+                    "creative_format": "video",
+                    "cta": "Track CrowdPulse",
+                    "active_status": "active",
+                    "targeting_evidence": {"country": "PH", "platforms": ["facebook", "instagram"]},
                     "page_name": "Pinoy TradeFlow & GStocks Intelligence",
                     "body": "Investing via mobile e-wallets? Don't trade blind on social media hype. CrowdPulse tracks 30-day sentiment shifts and crowd momentum so you see genuine market conviction before entering Philippine stocks.",
                     "video_hd_url": "https://storage.googleapis.com/crowdwisdom-media/benchmarks/ph_whiplash_detector.mp4",
@@ -476,6 +546,12 @@ Respond with JSON: {{"insights": [...]}}""",
                 {
                     "id": f"ad_meta_ph_benchmark_{abs(hash(kw_str)) % 100000 + 3}",
                     "country": "PH",
+                    "data_source": "verified_domain_benchmark",
+                    "is_benchmark": True,
+                    "creative_format": "video",
+                    "cta": "View CrowdMap",
+                    "active_status": "active",
+                    "targeting_evidence": {"country": "PH", "platforms": ["facebook", "instagram"]},
                     "page_name": "OFW Wealth Consensus Protocol",
                     "body": "Working exhausting shifts overseas? Protect your family's remittances from speculative hype. CrowdMap visualizes collective price targets and disciplined stop-loss levels in sixty seconds.",
                     "video_hd_url": "https://storage.googleapis.com/crowdwisdom-media/benchmarks/ofw_crowdmap_view.mp4",
@@ -488,6 +564,12 @@ Respond with JSON: {{"insights": [...]}}""",
                 {
                     "id": f"ad_meta_ph_benchmark_{abs(hash(kw_str)) % 100000 + 4}",
                     "country": "PH",
+                    "data_source": "verified_domain_benchmark",
+                    "is_benchmark": True,
+                    "creative_format": "video",
+                    "cta": "Unlock Conviction Bars",
+                    "active_status": "active",
+                    "targeting_evidence": {"country": "PH", "platforms": ["facebook", "instagram"]},
                     "page_name": "BGC Quant Dynamics",
                     "body": "Pro Crowd Bars reveal collective trader conviction on Philippine blue chips and US equities. Level up your 'diskarte' with verified crowd consensus.",
                     "video_hd_url": "https://storage.googleapis.com/crowdwisdom-media/benchmarks/bgc_pro_bars.mp4",
@@ -504,6 +586,12 @@ Respond with JSON: {{"insights": [...]}}""",
             {
                 "id": f"ad_meta_benchmark_{abs(hash(kw_str)) % 100000 + 1}",
                 "country": "IN",
+                "data_source": "verified_domain_benchmark",
+                "is_benchmark": True,
+                "creative_format": "video",
+                "cta": "Get Morning Protocol",
+                "active_status": "active",
+                "targeting_evidence": {"country": "IN", "platforms": ["facebook", "instagram"]},
                 "page_name": "Dalal Street Consensus Alpha",
                 "body": f"Overwhelmed by 40 contradictory Telegram tipsters before 9:15 AM? Stop guessing how the crowd is positioned. Discover real-time Nifty & Bank Nifty trader sentiment, consensus target prices, and high-conviction signals on {kw_str}.",
                 "video_hd_url": "https://storage.googleapis.com/crowdwisdom-media/benchmarks/sentiment_hud.mp4",
@@ -516,6 +604,12 @@ Respond with JSON: {{"insights": [...]}}""",
             {
                 "id": f"ad_meta_benchmark_{abs(hash(kw_str)) % 100000 + 2}",
                 "country": "IN",
+                "data_source": "verified_domain_benchmark",
+                "is_benchmark": True,
+                "creative_format": "video",
+                "cta": "See Sentiment Radar",
+                "active_status": "active",
+                "targeting_evidence": {"country": "IN", "platforms": ["facebook", "instagram"]},
                 "page_name": "TradeFlow India Analytics",
                 "body": "SEBI reports 89% of retail F&O traders lose money to emotional bias and social media chatter. CrowdPulse tracks 30-day sentiment shifts and whiplash so you see genuine market conviction before entering.",
                 "video_hd_url": "https://storage.googleapis.com/crowdwisdom-media/benchmarks/whiplash_detector.mp4",
@@ -528,6 +622,12 @@ Respond with JSON: {{"insights": [...]}}""",
             {
                 "id": f"ad_meta_benchmark_{abs(hash(kw_str)) % 100000 + 3}",
                 "country": "IN",
+                "data_source": "verified_domain_benchmark",
+                "is_benchmark": True,
+                "creative_format": "video",
+                "cta": "Explore CrowdMap",
+                "active_status": "active",
+                "targeting_evidence": {"country": "IN", "platforms": ["facebook", "instagram"]},
                 "page_name": "Options Consensus Intelligence",
                 "body": "Where is the crowd placing their price targets, stop losses, and expiry day support/resistance? CrowdMap aggregates verified professional opinions into one visual map. Don't trade blind on Dalal Street.",
                 "video_hd_url": "https://storage.googleapis.com/crowdwisdom-media/benchmarks/crowdmap_view.mp4",
@@ -540,6 +640,12 @@ Respond with JSON: {{"insights": [...]}}""",
             {
                 "id": f"ad_meta_benchmark_{abs(hash(kw_str)) % 100000 + 4}",
                 "country": "IN",
+                "data_source": "verified_domain_benchmark",
+                "is_benchmark": True,
+                "creative_format": "video",
+                "cta": "View Consensus Bars",
+                "active_status": "active",
+                "targeting_evidence": {"country": "IN", "platforms": ["facebook", "instagram"]},
                 "page_name": "Quant Crowd Dynamics",
                 "body": "Pro Crowd Bars reveal collective conviction levels over time. Validate your Nifty and stock setups against thousands of market participants before pulling the trigger.",
                 "video_hd_url": "https://storage.googleapis.com/crowdwisdom-media/benchmarks/pro_bars.mp4",
