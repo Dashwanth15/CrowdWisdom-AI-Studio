@@ -13,7 +13,7 @@ services:
     plan: starter
     branch: main
     buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
-    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 50
     healthCheckPath: /health
     autoDeploy: true
     envVars:
@@ -23,6 +23,16 @@ services:
         value: 0.0.0.0
       - key: PYTHON_VERSION
         value: 3.11.10
+      - key: MAX_CONCURRENT_VIDEO_RENDERS
+        value: "1"
+      - key: VIDEO_RENDER_TIMEOUT_SECONDS
+        value: "300"
+      - key: VIDEO_FFMPEG_THREADS
+        value: "2"
+      - key: VIDEO_FFMPEG_PRESET
+        value: "veryfast"
+      - key: VIDEO_RENDER_MEMORY_LIMIT_MB
+        value: "450"
       - key: MONGODB_DB_NAME
         value: crowdwisdom_ai_studio
       - key: APP_SECRET_KEY

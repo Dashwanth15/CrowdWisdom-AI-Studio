@@ -175,8 +175,9 @@ def render_optical_bloom(
 ) -> np.ndarray:
     """
     Cinematic Anamorphic Light-Leak & Optical Bloom Dissolve.
-    Smooth gamma-corrected dissolve washed over by an expanding amber/cyan optical flare.
+    Memory-optimized: uses low-resolution flare buffer to prevent 100+ MB transient array spikes.
     """
+    from PIL import Image
     h, w, c = frame_a.shape
 
     alpha = ease_smootherstep(tau)
@@ -185,26 +186,26 @@ def render_optical_bloom(
     flare_amp = math.exp(-18.0 * ((tau - 0.5) ** 2))
 
     if flare_amp > 0.02:
-        fy = int(h * (0.2 + 0.3 * tau))
-        fx = int(w * (0.8 - 0.6 * tau))
+        dh, dw = max(32, h // 4), max(32, w // 4)
+        fy = int(dh * (0.2 + 0.3 * tau))
+        fx = int(dw * (0.8 - 0.6 * tau))
 
-        y_coords = np.arange(h, dtype=np.float32)[:, None]
-        x_coords = np.arange(w, dtype=np.float32)[None, :]
+        y_coords = np.arange(dh, dtype=np.float32)[:, None]
+        x_coords = np.arange(dw, dtype=np.float32)[None, :]
 
-        dy = (y_coords - fy) / (h * 0.18)
-        dx = (x_coords - fx) / (w * 0.72)
+        dy = (y_coords - fy) / (dh * 0.18)
+        dx = (x_coords - fx) / (dw * 0.72)
         dist_sq = dy * dy + dx * dx
-        glow = np.exp(-dist_sq) * flare_amp
+        glow_small = (np.exp(-dist_sq) * (flare_amp * 255.0)).astype(np.uint8)
 
-        flare_layer = np.zeros((h, w, 3), dtype=np.float32)
-        flare_layer[:, :, 0] = glow * 240.0
-        flare_layer[:, :, 1] = glow * 180.0
-        flare_layer[:, :, 2] = glow * 120.0
+        # Upscale glow buffer to full frame size
+        glow_img = Image.fromarray(glow_small).resize((w, h), Image.Resampling.BILINEAR)
+        glow = np.array(glow_img, dtype=np.float32) / 255.0
 
-        inv_base = 255.0 - dissolved
-        inv_flare = np.clip(255.0 - flare_layer, 0, 255.0)
-        screened = 255.0 - (inv_base * inv_flare / 255.0)
-        return np.clip(screened, 0, 255).astype(np.uint8)
+        # Fast additive flare wash in-place
+        dissolved[:, :, 0] += glow * 220.0
+        dissolved[:, :, 1] += glow * 165.0
+        dissolved[:, :, 2] += glow * 110.0
 
     return np.clip(dissolved, 0, 255).astype(np.uint8)
 
@@ -909,18 +910,21 @@ class OpenMontageAdapter:
                 except Exception:
                     pass
 
-        render_result = await asyncio.to_thread(
-            self._render_scenes_moviepy,
-            scenes_with_assets,
-            str(out_path),
-            str(thumb_path),
-            width,
-            height,
-            target_duration,
-            quality,
-            tts_result,
-            sync_progress
-        )
+        from services.memory_monitor import MemoryTracker
+        v_job_id = out_path.stem.replace("video_", "")
+        async with MemoryTracker(job_id=v_job_id, job_type="video_render", limit_mb=float(getattr(settings, "VIDEO_RENDER_MEMORY_LIMIT_MB", 450.0))):
+            render_result = await asyncio.to_thread(
+                self._render_scenes_moviepy,
+                scenes_with_assets,
+                str(out_path),
+                str(thumb_path),
+                width,
+                height,
+                target_duration,
+                quality,
+                tts_result,
+                sync_progress
+            )
 
         await _update_progress(98, "Finalizing MP4 container and commercial audio mix...")
         return render_result
@@ -948,6 +952,10 @@ class OpenMontageAdapter:
         except ImportError:
             raise RuntimeError("MoviePy is required for video rendering. Install via pip install moviepy")
 
+        open_video_clips: List[Any] = []
+        open_audio_clips: List[Any] = []
+        temp_files_to_unlink: List[Path] = []
+        final_clip = None
         clips = []
         num_scenes = len(scenes)
         if num_scenes == 0:
@@ -1025,12 +1033,9 @@ class OpenMontageAdapter:
         def draw_kinetic_caption(base_canvas: Any, t: float, phrases: List[Dict[str, Any]], w_w: int, h_h: int, f_main, f_act, scene_id: Any = 0) -> Any:
             """
             Renders dynamic lower-third caption card highlighting the currently spoken word.
-            Features:
-            - Frame-level active speech interval detection: suppresses display during pre-roll, post-roll,
-              and silent gaps between phrases so visuals breathe.
-            - Dual scene_id + phrase_id cache isolation: guarantees zero cross-scene or cross-phrase subtitle bleed.
-            - True Pillow alpha compositing: renders highlight pill under the text, and renders text on top
-              with crisp drop-shadow, eliminating opaque rectangular mask bugs.
+            Memory-optimized: renders ONLY the local subtitle card bounding box (card_w x card_h)
+            instead of a full-frame 1080x1920 canvas, reducing memory per entry from 8.3 MB to ~0.5 MB.
+            Uses bounded LRU cache (max 8 entries) to strictly cap memory usage under 4 MB.
             """
             if not phrases:
                 return base_canvas
@@ -1061,8 +1066,10 @@ class OpenMontageAdapter:
             phrase_id = active_p.get("id") or f"p{p_idx}_" + "_".join(active_p.get("words", [])[:3])
             cache_key = (str(scene_id), str(phrase_id), active_w_idx, w_w, h_h)
             if cache_key not in caption_cache:
-                cap_img = Image.new("RGBA", (w_w, h_h), (0, 0, 0, 0))
-                draw = ImageDraw.Draw(cap_img)
+                # Bounded cache eviction: discard oldest entry if exceeding 8 entries
+                if len(caption_cache) >= 8:
+                    oldest_key = next(iter(caption_cache))
+                    caption_cache.pop(oldest_key, None)
 
                 # Modern typographic spacing with stable font.getlength
                 space_w = max(24, int(w_w * 0.022))
@@ -1094,21 +1101,25 @@ class OpenMontageAdapter:
                 card_x = (w_w - card_w) // 2
                 card_y = int(h_h * 0.77)
 
-                # 2. Dark frosted obsidian glass capsule
+                # Local card image (only card_w x card_h, e.g. 990x152 = 0.5 MB instead of 8.3 MB!)
+                card_img = Image.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
+                draw = ImageDraw.Draw(card_img)
+
+                # 2. Dark frosted obsidian glass capsule drawn local to card
                 draw.rounded_rectangle(
-                    [card_x, card_y, card_x + card_w, card_y + card_h],
+                    [0, 0, card_w, card_h],
                     radius=18,
                     fill=(10, 14, 24, 235),
                     outline=(56, 189, 248, 140),
                     width=2
                 )
 
-                # Position words per line
+                # Position words per line relative to card
                 word_positions = {}
                 for l_idx, l_indices in enumerate(lines):
                     lw = line_widths[l_idx]
-                    start_x = card_x + (card_w - lw) // 2
-                    text_y = card_y + card_pad_v + l_idx * line_height + 4
+                    start_x = (card_w - lw) // 2
+                    text_y = card_pad_v + l_idx * line_height + 4
                     cur_x = start_x
                     for w_i in l_indices:
                         w = words_info[w_i][0]
@@ -1146,12 +1157,13 @@ class OpenMontageAdapter:
                         draw.text((wx + 1, ty + 1), w, fill=(0, 0, 0, 180), font=f_main)
                         draw.text((wx, ty), w, fill=(225, 235, 248, 255), font=f_main)
 
-                caption_cache[cache_key] = cap_img
+                caption_cache[cache_key] = (card_img, card_x, card_y)
 
-            cap_layer = caption_cache[cache_key]
+            card_img, card_x, card_y = caption_cache[cache_key]
             if base_canvas.mode != "RGBA":
                 base_canvas = base_canvas.convert("RGBA")
-            return Image.alpha_composite(base_canvas, cap_layer)
+            base_canvas.paste(card_img, (card_x, card_y), card_img)
+            return base_canvas
 
         oversized_w = int(width * 1.15)
         oversized_h = int(height * 1.15)
@@ -1441,6 +1453,9 @@ class OpenMontageAdapter:
 
                     source_video_path = str(prescaled_p) if prescaled_p.exists() else a_path
                     cropped_video = VideoFileClip(source_video_path).without_audio()
+                    open_video_clips.append(cropped_video)
+                    if prescaled_p.exists() and prescaled_p not in temp_files_to_unlink:
+                        temp_files_to_unlink.append(prescaled_p)
 
                     # Fallback resize if pre-scaling was bypassed
                     vw, vh = cropped_video.size
@@ -1557,19 +1572,22 @@ class OpenMontageAdapter:
                 resized = cropped.resize((width, height), Image.Resampling.BILINEAR).convert("RGBA")
                 comp = Image.alpha_composite(resized, ov)
 
-                # Dynamic subtle ambient daylight sweep across the scene
-                light_sweep = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-                ls_draw = ImageDraw.Draw(light_sweep)
+                # Dynamic subtle ambient daylight sweep across the scene (local strip rendering)
                 sweep_y = int((height * 0.18) + math.sin(t * 1.6) * (height * 0.06))
+                sweep_h = 74
+                sweep_y0 = max(0, sweep_y - 37)
+                sweep_strip = Image.new("RGBA", (width, sweep_h), (0, 0, 0, 0))
+                ls_draw = ImageDraw.Draw(sweep_strip)
                 for dy in range(-35, 35, 4):
                     l_alpha = int(14 * (1.0 - abs(dy) / 35.0))
-                    ls_draw.line([(0, sweep_y + dy), (width, sweep_y + dy)], fill=(255, 235, 200, l_alpha), width=3)
-                comp = Image.alpha_composite(comp, light_sweep)
+                    local_y = dy + 37
+                    if 0 <= local_y < sweep_h:
+                        ls_draw.line([(0, local_y), (width, local_y)], fill=(255, 235, 200, l_alpha), width=3)
+                comp.paste(sweep_strip, (0, sweep_y0), sweep_strip)
 
                 if snum == 1 and 0.6 <= t <= 3.2 and official_logo_img:
                     intro_alpha = min(1.0, (t - 0.6) / 0.5) * min(1.0, (3.2 - t) / 0.5)
                     if intro_alpha > 0.05:
-                        intro_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
                         intro_w = int(width * 0.54)
                         intro_scale = intro_w / official_logo_img.width
                         intro_h = int(official_logo_img.height * intro_scale)
@@ -1579,8 +1597,7 @@ class OpenMontageAdapter:
                         intro_logo = Image.merge("RGBA", (r, g, b, a))
                         intro_x = (width - intro_w) // 2
                         intro_y = int(height * 0.10)
-                        intro_layer.paste(intro_logo, (intro_x, intro_y), intro_logo)
-                        comp = Image.alpha_composite(comp, intro_layer)
+                        comp.paste(intro_logo, (intro_x, intro_y), intro_logo)
 
                 comp = draw_kinetic_caption(comp, t, phr, width, height, font_body, font_active, scene_id=snum)
                 final_img = comp.convert("RGB")
@@ -1618,6 +1635,7 @@ class OpenMontageAdapter:
 
             main_clip = VideoClip(make_main_frame, duration=main_dur)
             clips.append(main_clip)
+            open_video_clips.append(main_clip)
             current_time_cursor += main_dur
 
             # 2. Cinematic Transition to next scene
@@ -1639,6 +1657,7 @@ class OpenMontageAdapter:
 
                 trans_clip = VideoClip(make_trans_frame, duration=trans_dur)
                 clips.append(trans_clip)
+                open_video_clips.append(trans_clip)
                 current_time_cursor += trans_dur
 
         final_clip = concatenate_videoclips(clips, method="compose")
@@ -1655,6 +1674,7 @@ class OpenMontageAdapter:
             try:
                 narration_clip = AudioFileClip(tts_result["master_audio_path"]).with_volume_scaled(1.15)
                 master_audio_clips.append(narration_clip)
+                open_audio_clips.append(narration_clip)
                 speech_intervals = tts_result.get("speech_intervals", [])
                 logger.info(f"[OpenMontageAdapter] Mounted {narration_clip.duration:.1f}s master voiceover narration.")
             except Exception as narr_err:
@@ -1670,6 +1690,7 @@ class OpenMontageAdapter:
                 fps=44100
             )
             master_audio_clips.append(soundtrack_clip)
+            open_audio_clips.append(soundtrack_clip)
             logger.info(f"[OpenMontageAdapter] Generated {total_dur:.1f}s fintech cinematic soundtrack with sidechain ducking, {len(transition_timestamps)} transition whooshes, and CTA resolution chime.")
         except Exception as st_err:
             logger.warning(f"[OpenMontageAdapter] Soundtrack synthesis notice: {st_err}")
@@ -1677,6 +1698,7 @@ class OpenMontageAdapter:
         if master_audio_clips:
             try:
                 final_audio = CompositeAudioClip(master_audio_clips) if len(master_audio_clips) > 1 else master_audio_clips[0]
+                open_audio_clips.append(final_audio)
                 final_clip = final_clip.with_audio(final_audio)
             except Exception as mix_err:
                 logger.warning(f"[OpenMontageAdapter] Audio mixing fallback: {mix_err}")
@@ -1725,28 +1747,57 @@ class OpenMontageAdapter:
 
             render_logger = RenderProgressLogger(sync_progress)
 
+        ffmpeg_threads = max(1, min(4, getattr(settings, "VIDEO_FFMPEG_THREADS", 2)))
+        ffmpeg_preset = getattr(settings, "VIDEO_FFMPEG_PRESET", "veryfast")
+
         ffmpeg_args = [
             "-pix_fmt", "yuv420p",
             "-movflags", "+faststart",
             "-profile:v", "high",
             "-level", "4.2",
-            "-threads", "8",
+            "-threads", str(ffmpeg_threads),
+            "-x264-params", "rc-lookahead=10:sync-lookahead=5",
         ] + scale_filter
 
-        final_clip.write_videofile(
-            out_path,
-            fps=30,  # Broadcast-standard 30 FPS
-            codec="libx264",
-            audio_codec="aac",
-            bitrate="6000k",
-            preset="fast",
-            threads=1,  # Single-threaded Python avoids GIL contention while FFmpeg uses all 8 cores
-            ffmpeg_params=ffmpeg_args,
-            logger=render_logger
-        )
-
-        actual_duration = float(final_clip.duration)
-        final_clip.close()
+        try:
+            final_clip.write_videofile(
+                out_path,
+                fps=30,  # Broadcast-standard 30 FPS
+                codec="libx264",
+                audio_codec="aac",
+                bitrate="4500k",
+                preset=ffmpeg_preset,
+                threads=1,  # Single-threaded Python avoids GIL contention
+                ffmpeg_params=ffmpeg_args,
+                logger=render_logger
+            )
+            actual_duration = float(final_clip.duration)
+        finally:
+            # Deterministic, leak-free disposal of all clip instances and temp files
+            for c in open_video_clips:
+                try:
+                    c.close()
+                except Exception:
+                    pass
+            for a in open_audio_clips:
+                try:
+                    a.close()
+                except Exception:
+                    pass
+            if final_clip:
+                try:
+                    final_clip.close()
+                except Exception:
+                    pass
+            for p in temp_files_to_unlink:
+                try:
+                    if p.exists():
+                        p.unlink()
+                except Exception:
+                    pass
+            caption_cache.clear()
+            from services.memory_monitor import release_system_memory
+            release_system_memory()
 
         if tts_result and tts_result.get("master_audio_path"):
             try:

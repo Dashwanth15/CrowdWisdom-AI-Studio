@@ -193,6 +193,16 @@ class TTSService:
             master_narration.write_audiofile(str(master_output_path), fps=44100, logger=None)
             master_narration.close()
 
+            # Clean up intermediate scene audio temp files immediately
+            for sp in speech_results:
+                if sp.get("audio_path"):
+                    try:
+                        p = Path(sp["audio_path"])
+                        if p.exists():
+                            p.unlink()
+                    except Exception:
+                        pass
+
             # Close individual clips
             for c in scene_audio_clips:
                 try:

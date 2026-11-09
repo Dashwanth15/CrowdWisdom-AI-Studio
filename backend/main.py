@@ -206,6 +206,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def health_check():
     """Health check endpoint for Render service probes and uptime monitors."""
     from database.connection import get_database
+    from services.memory_monitor import get_process_memory_mb
+    from workers.job_manager import job_manager
     try:
         db = get_database()
         await db.command("ping")
@@ -213,13 +215,29 @@ async def health_check():
     except Exception:
         db_status = "disconnected"
 
+    mem = get_process_memory_mb()
+    metrics = job_manager.get_metrics()
+
     return {
         "status": "ok",
         "service": "CrowdWisdom AI Studio",
         "version": "1.0.0",
         "database": db_status,
         "environment": settings.APP_ENV,
+        "memory": {
+            "rss_mb": mem["rss_mb"],
+            "active_renders": metrics["active_renders"],
+            "queued_renders": metrics["queued_renders"],
+            "limit_mb": float(getattr(settings, "VIDEO_RENDER_MEMORY_LIMIT_MB", 450.0)),
+        }
     }
+
+
+@app.get("/api/system/memory", tags=["Health"])
+async def system_memory_diagnostics():
+    """Detailed memory and concurrency telemetry for infrastructure monitoring."""
+    from workers.job_manager import job_manager
+    return job_manager.get_metrics()
 
 
 if __name__ == "__main__":

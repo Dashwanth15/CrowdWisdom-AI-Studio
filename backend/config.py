@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     MEDIA_DIR: str = str((Path(__file__).parent / "media").resolve())
     MAX_VIDEO_SIZE_MB: int = 500
 
+    # Video Production Memory & Concurrency Controls
+    MAX_CONCURRENT_VIDEO_RENDERS: int = Field(default=1, validation_alias=AliasChoices("MAX_CONCURRENT_VIDEO_RENDERS", "MAX_CONCURRENT_RENDERS"))
+    VIDEO_RENDER_TIMEOUT_SECONDS: int = Field(default=300, validation_alias=AliasChoices("VIDEO_RENDER_TIMEOUT_SECONDS", "RENDER_TIMEOUT_SECONDS"))
+    VIDEO_FFMPEG_THREADS: int = Field(default=2, validation_alias=AliasChoices("VIDEO_FFMPEG_THREADS", "FFMPEG_THREADS"))
+    VIDEO_FFMPEG_PRESET: str = Field(default="veryfast", validation_alias=AliasChoices("VIDEO_FFMPEG_PRESET", "FFMPEG_PRESET"))
+    VIDEO_RENDER_MEMORY_LIMIT_MB: int = Field(default=450, validation_alias=AliasChoices("VIDEO_RENDER_MEMORY_LIMIT_MB", "RENDER_MEMORY_LIMIT_MB"))
+
     @field_validator("APP_SECRET_KEY", "JWT_SECRET_KEY", "MONGODB_URL", mode="before")
     @classmethod
     def strip_whitespace_and_quotes(cls, v: Any) -> Any:

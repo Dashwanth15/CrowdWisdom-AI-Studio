@@ -89,7 +89,7 @@ If you prefer to configure each service manually in the Render dashboard:
      ```
    - **Start Command:**  
      ```bash
-     cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+     cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 50
      ```
    - **Plan:** `Starter` ($7/mo) or `Free`
 4. Expand **Advanced**:
@@ -102,6 +102,11 @@ If you prefer to configure each service manually in the Render dashboard:
 | `APP_ENV` | `production` | Enforces production security checks |
 | `APP_HOST` | `0.0.0.0` | Binds to all network interfaces |
 | `PYTHON_VERSION` | `3.11.10` | Pinned Python runtime |
+| `MAX_CONCURRENT_VIDEO_RENDERS` | `1` | Enforces sequential video rendering to prevent Render OOM restarts |
+| `VIDEO_FFMPEG_THREADS` | `2` | Limits libx264 encoding threads on single vCPU |
+| `VIDEO_FFMPEG_PRESET` | `veryfast` | Memory-efficient low-lookahead encoder preset |
+| `VIDEO_RENDER_TIMEOUT_SECONDS` | `300` | Automated timeout and cleanup for stalled renders |
+| `VIDEO_RENDER_MEMORY_LIMIT_MB` | `450` | RSS memory threshold with automated GC & alert logging |
 | `MONGODB_DB_NAME` | `crowdwisdom_ai_studio` | Database name |
 | `APP_SECRET_KEY` | *(32+ char random string)* | Used for Fernet encryption of API keys |
 | `JWT_SECRET_KEY` | *(32+ char random string)* | Used for signing user auth tokens |

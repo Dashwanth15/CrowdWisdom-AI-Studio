@@ -11,6 +11,7 @@ from bson import ObjectId
 
 from database.connection import get_database
 from services.websocket_manager import ws_manager
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class JobManager:
     """
     Central background job execution manager.
     Coordinates asynchronous tasks, idempotency tracking, cancellations,
-    and server startup state recovery.
+    concurrency limiting for heavy video renders, and server startup state recovery.
     """
 
     def __init__(self):
@@ -27,6 +28,18 @@ class JobManager:
         self._active_tasks: Dict[str, asyncio.Task] = {}
         # Active idempotency keys (e.g., "video_render_{script_id}")
         self._active_keys: Set[str] = set()
+        # Concurrency semaphore for heavy video rendering
+        self._video_semaphore: Optional[asyncio.Semaphore] = None
+        self._active_renders: int = 0
+        self._queued_renders: int = 0
+
+    def _get_video_semaphore(self) -> asyncio.Semaphore:
+        """Lazily initialize the video concurrency semaphore in the running event loop."""
+        if self._video_semaphore is None:
+            max_renders = max(1, getattr(settings, "MAX_CONCURRENT_VIDEO_RENDERS", 1))
+            self._video_semaphore = asyncio.Semaphore(max_renders)
+            logger.info(f"[JobManager] Initialized video concurrency semaphore (limit={max_renders}).")
+        return self._video_semaphore
 
     async def recover_orphaned_jobs_on_boot(self, db=None):
         """
@@ -201,6 +214,8 @@ class JobManager:
     ) -> bool:
         """
         Submits a job for execution if not already actively running under idempotency_key.
+        For video rendering jobs, enforces concurrency limits via an asynchronous semaphore,
+        queueing subsequent jobs to prevent container memory limit exceedance.
         """
         # Clean up any stale finished tasks
         for t_id, t_obj in list(self._active_tasks.items()):
@@ -219,10 +234,43 @@ class JobManager:
                 return False
 
         self._active_keys.add(idempotency_key)
+        is_video = (job_type == "video_production")
+        if is_video:
+            self._queued_renders += 1
+            logger.info(
+                f"[JobManager] Video render job {job_id} scheduled "
+                f"(active_renders={self._active_renders}, queued_renders={self._queued_renders})"
+            )
 
         async def _wrapper():
             try:
-                await coro_func()
+                if is_video:
+                    timeout_sec = float(getattr(settings, "VIDEO_RENDER_TIMEOUT_SECONDS", 300))
+                    semaphore = self._get_video_semaphore()
+                    async with semaphore:
+                        self._queued_renders = max(0, self._queued_renders - 1)
+                        self._active_renders += 1
+                        logger.info(
+                            f"[JobManager] Video render job {job_id} acquired execution lock "
+                            f"(active_renders={self._active_renders}, queued_renders={self._queued_renders})"
+                        )
+                        try:
+                            await asyncio.wait_for(coro_func(), timeout=timeout_sec)
+                        except asyncio.TimeoutError:
+                            logger.error(f"[JobManager] Video render job {job_id} timed out after {timeout_sec}s.")
+                            db = get_database()
+                            await db.agent_executions.update_one(
+                                {"_id": ObjectId(job_id) if ObjectId.is_valid(job_id) else None},
+                                {"$set": {
+                                    "status": "failed",
+                                    "error_message": f"Render timed out after {timeout_sec:.0f}s. Resources released.",
+                                    "completed_at": datetime.now(timezone.utc)
+                                }}
+                            )
+                        finally:
+                            self._active_renders = max(0, self._active_renders - 1)
+                else:
+                    await coro_func()
             except asyncio.CancelledError:
                 logger.info(f"[JobManager] Job {job_id} was cancelled.")
                 db = get_database()
@@ -239,6 +287,18 @@ class JobManager:
         task = asyncio.create_task(_wrapper())
         self._active_tasks[job_id] = task
         return True
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Returns background worker telemetry, concurrency, and memory metrics."""
+        from services.memory_monitor import get_process_memory_mb, get_system_memory_mb
+        return {
+            "active_tasks_count": len([t for t in self._active_tasks.values() if not t.done()]),
+            "active_renders": self._active_renders,
+            "queued_renders": self._queued_renders,
+            "max_concurrent_renders": getattr(settings, "MAX_CONCURRENT_VIDEO_RENDERS", 1),
+            "process_memory": get_process_memory_mb(),
+            "system_memory": get_system_memory_mb(),
+        }
 
     async def cancel_job(self, job_id: str) -> bool:
         """Cancels an actively running background task."""
