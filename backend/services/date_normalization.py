@@ -11,11 +11,12 @@ logger = logging.getLogger(__name__)
 
 # Primary publication/start date fields found in Meta Ads Library / Apify actors in priority order
 CANDIDATE_DATE_FIELDS = [
+    "startDateFormatted",
+    "startDate",
     "ad_delivery_start_time",
     "adDeliveryStartTime",
     "delivery_start_time",
     "start_date",
-    "startDate",
     "first_seen",
     "firstSeenDate",
 ]
@@ -116,9 +117,11 @@ def extract_and_normalize_publication_date(
 
     # Extract ad ID for Meta Ads Library deep-link
     ad_id = str(
-        raw_ad.get("ad_id")
-        or raw_ad.get("id")
+        raw_ad.get("adArchiveId")
+        or raw_ad.get("adArchiveID")
         or raw_ad.get("ad_archive_id")
+        or raw_ad.get("ad_id")
+        or raw_ad.get("id")
         or raw_ad.get("adId")
         or ""
     ).strip()

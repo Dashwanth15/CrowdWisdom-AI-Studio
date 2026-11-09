@@ -21,3 +21,4 @@ async def test_apify_run():
 
 if __name__ == "__main__":
     asyncio.run(test_apify_run())
+

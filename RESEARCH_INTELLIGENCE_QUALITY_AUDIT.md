@@ -442,3 +442,4 @@ npm --prefix frontend run build
 
 ---
 *Report certified by Principal AI Architect & Engineering Lead. All code changes staged and tested.*
+

@@ -154,9 +154,10 @@ GROUND-TRUTH MARKET RESEARCH EVIDENCE (Cite or ground in script):
 
 MANDATORY REGULATORY COMPLIANCE ({reg_safeguards.get('regulator')}):
 1. NEVER promise guaranteed returns, win rates, or risk-free profits.
-2. Emphasize that CrowdWisdom provides objective market sentiment and consensus tools for research.
-3. Users execute trades on their own brokerages.
-4. Mandatory disclaimer to include: "{disclaimers_str}"
+2. NEVER use absolute terms like 'scam-proof', 'foolproof', or claim to eliminate investment risk. Position platform as 'Research-Backed Clarity for More Informed Investing'.
+3. Emphasize that CrowdWisdom provides objective market sentiment and consensus tools for research.
+4. Users execute trades on their own brokerages.
+5. Mandatory disclaimer to include: "{disclaimers_str}"
 ======================================================================
 """
 

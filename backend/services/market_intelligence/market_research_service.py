@@ -179,7 +179,7 @@ class MarketResearchService:
                 f"Indian retail investor demat Zerodha Groww market trends",
             ]
         elif country == "PH":
-            return [
+            results = [
                 f"Philippines PSE stock market retail investors {topic} 2026",
                 f"Philippine retail trading GCash Maya GStocks sentiment",
                 f"OFW investing Philippine stock exchange PSEi trends",
@@ -294,6 +294,7 @@ class MarketResearchService:
             "publication_date": pub_date,
             "date_verification_status": date_status,
             "staleness_factor": staleness_factor,
+            "staleness_penalty": staleness_penalty,
             "domain": domain,
         }
 
@@ -326,19 +327,40 @@ class MarketResearchService:
 
         audience_segment = "in_options_derivative_trader" if country == "IN" else "ph_active_equity_trader"
 
+        # Evidence classification based on source tier and date verification
+        if scoring["tier"] == 1 and scoring["date_verification_status"] == "verified":
+            evidence_classification = "DIRECTLY_SUPPORTED"
+            verification_status = "verified"
+        elif scoring["tier"] <= 3 and scoring["date_verification_status"] == "verified":
+            evidence_classification = "DIRECTLY_SUPPORTED"
+            verification_status = "verified"
+        elif scoring["tier"] <= 4:
+            evidence_classification = "PARTIALLY_SUPPORTED"
+            verification_status = "unverified"
+        else:
+            evidence_classification = "UNVERIFIED"
+            verification_status = "unverified"
+
         return {
             "country": country,
+            "target_country": country,
             "topic": topic,
+            "claim_text": finding,
             "finding": finding,
             "source_url": url,
             "publisher": author or scoring["domain"] or provider,
+            "article_title": raw_title or finding[:80],
             "publication_date": scoring["publication_date"],
-            "date_verification_status": scoring["date_verification_status"],
+            "retrieval_timestamp": retrieval_date,
             "retrieval_date": retrieval_date,
-            "confidence_level": scoring["confidence_level"],
-            "confidence_score": scoring["final_score"],
             "source_tier": scoring["tier"],
             "source_tier_name": scoring["tier_name"],
+            "supporting_excerpt": raw_content[:400].strip(),
+            "evidence_classification": evidence_classification,
+            "confidence_score": scoring["final_score"],
+            "confidence_level": scoring["confidence_level"],
+            "verification_status": verification_status,
+            "date_verification_status": scoring["date_verification_status"],
             "staleness_factor": scoring["staleness_factor"],
             "evidence_type": scoring["evidence_type"],
             "relevant_audience_segment": audience_segment,
@@ -352,8 +374,9 @@ class MarketResearchService:
         These are verified empirical facts from regulatory studies, exchange disclosures, and central banks.
         """
         now_str = datetime.now(timezone.utc).isoformat()
+        results = []
         if country == "IN":
-            return [
+            results = [
                 {
                     "country": "IN",
                     "topic": "retail options trading behavior",
@@ -401,7 +424,7 @@ class MarketResearchService:
                 },
             ]
         elif country == "PH":
-            return [
+            results = [
                 {
                     "country": "PH",
                     "topic": "retail stock market democratization via fintech",
@@ -448,7 +471,22 @@ class MarketResearchService:
                     "discovery_provider": "SEC Philippines Enforcement Notices",
                 },
             ]
-        return []
+
+        # Normalize benchmarks with 12-field claim-level structure
+        for b in results:
+            b["target_country"] = country
+            b["claim_text"] = b["finding"]
+            b["article_title"] = b.get("topic", "").title()
+            b["supporting_excerpt"] = b["finding"]
+            b["evidence_classification"] = "DIRECTLY_SUPPORTED"
+            b["verification_status"] = "verified"
+            b["date_verification_status"] = "verified"
+            b["source_tier"] = 1
+            b["source_tier_name"] = "Official Regulators & Central Exchanges"
+            b["retrieval_timestamp"] = b.get("retrieval_date", now_str)
+            b["is_benchmark"] = True
+
+        return results
 
     def _format_doc(self, doc: Dict[str, Any]) -> Dict[str, Any]:
         """Formats a MongoDB document for consumer response."""

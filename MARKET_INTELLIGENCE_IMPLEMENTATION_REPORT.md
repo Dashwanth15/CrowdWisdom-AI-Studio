@@ -256,3 +256,4 @@ Zero TypeScript compilation errors; zero Vite packaging errors.
 - All market intelligence services enforce bounded in-memory caching (`_RESEARCH_CACHE` TTL: 60m).
 - Caches store lightweight metadata references; heavy payloads are delegated to MongoDB Atlas.
 - No market intelligence objects are retained across video rendering subprocesses, preserving the 246 MB low-RSS ceiling during MoviePy/FFmpeg rendering operations.
+

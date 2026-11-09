@@ -36,6 +36,147 @@ class AdsManagerAgent(BaseHermesAgent):
     agent_name = "Ads Manager Agent"
     agent_description = "Discovers and analyzes competitor advertisements, extracts marketing intelligence and advertising patterns."
 
+    def normalize_ad(
+        self,
+        ad: Dict[str, Any],
+        target_country: str,
+        scrape_time: Optional[datetime] = None,
+        date_range_days: int = 30,
+    ) -> Dict[str, Any]:
+        """Normalizes an individual Apify/Meta ad or benchmark record."""
+        snapshot = ad.get("snapshot") if isinstance(ad.get("snapshot"), dict) else {}
+        ad_id = str(
+            ad.get("adArchiveId")
+            or ad.get("adArchiveID")
+            or ad.get("id")
+            or ad.get("ad_archive_id")
+            or ad.get("adId")
+            or ""
+        ).strip()
+
+        scrape_dt = scrape_time or datetime.now(timezone.utc)
+        date_meta = extract_and_normalize_publication_date(
+            raw_ad=ad,
+            scraped_at=scrape_dt,
+            window_days=date_range_days,
+        )
+
+        has_video = bool(snapshot.get("videos") or ad.get("video_hd_url") or snapshot.get("displayFormat") == "video")
+        has_cards = bool(snapshot.get("cards") or ad.get("cards") or ad.get("carousel_data"))
+        creative_fmt = "video" if has_video else ("carousel" if has_cards else "single_image")
+
+        body_val = snapshot.get("body") or ad.get("body") or ad.get("ad_copy")
+        if isinstance(body_val, dict):
+            body_text = body_val.get("text", "")
+        elif isinstance(body_val, str):
+            body_text = body_val
+        elif isinstance(ad.get("ad_creative_bodies"), list) and ad.get("ad_creative_bodies"):
+            body_text = ad["ad_creative_bodies"][0]
+        else:
+            body_text = ad.get("adText") or snapshot.get("title") or ""
+
+        cta_val = (
+            snapshot.get("ctaText")
+            or snapshot.get("ctaType")
+            or ad.get("call_to_action_type")
+            or ad.get("cta")
+            or ad.get("cta_text")
+            or (ad.get("ad_creative_link_captions", [None])[0] if isinstance(ad.get("ad_creative_link_captions"), list) and ad.get("ad_creative_link_captions") else None)
+            or ad.get("link_caption")
+        )
+
+        is_active_flag = ad.get("isActive")
+        if is_active_flag is not None:
+            active_status_val = "active" if is_active_flag else "inactive"
+        else:
+            active_status_val = ad.get("active_status") or ad.get("status") or ("active" if not ad.get("end_date") and not ad.get("endDateFormatted") else "inactive")
+
+        is_bench = bool(ad.get("is_benchmark") or str(ad_id).startswith("ad_meta_benchmark") or str(ad_id).startswith("ad_meta_ph_benchmark") or not ad_id)
+        if is_bench:
+            ad_category = "VERIFIED_DOMAIN_BENCHMARK"
+            data_src = "verified_domain_benchmark"
+        elif active_status_val == "active":
+            ad_category = "LIVE_META_AD"
+            data_src = "meta_ads_library"
+        else:
+            ad_category = "HISTORICAL_META_AD"
+            data_src = "meta_ads_library"
+
+        targeting_info = ad.get("targeting_evidence")
+        if not targeting_info:
+            targeting_info = {
+                "publisher_platforms": ad.get("publisherPlatform") or [],
+                "targeted_countries": ad.get("targetedOrReachedCountries") or [],
+                "query_country": target_country,
+            }
+
+        headline_val = snapshot.get("title") or ad.get("title") or (ad.get("ad_creative_link_titles", [None])[0] if isinstance(ad.get("ad_creative_link_titles"), list) and ad.get("ad_creative_link_titles") else None)
+
+        advertiser_name = (
+            ad.get("pageName")
+            or snapshot.get("pageName")
+            or ad.get("page_name")
+            or ad.get("advertiserName")
+            or ad.get("competitor_name")
+            or "Unknown"
+        )
+
+        landing_page_val = (
+            snapshot.get("linkUrl")
+            or (ad.get("ad_creative_link_urls", [None])[0] if isinstance(ad.get("ad_creative_link_urls"), list) and ad.get("ad_creative_link_urls") else None)
+            or ad.get("landing_page")
+            or ad.get("landingPage")
+        )
+
+        observed_facts = ad.get("observed_facts", [])
+        if not observed_facts:
+            facts = [f"Advertiser: {advertiser_name}"]
+            if cta_val:
+                facts.append(f"CTA: {cta_val}")
+            if creative_fmt:
+                facts.append(f"Format: {creative_fmt}")
+            if ad.get("publisherPlatform"):
+                facts.append(f"Platforms: {', '.join(ad.get('publisherPlatform'))}")
+            observed_facts = facts
+
+        return {
+            "ad_id": ad_id,
+            "meta_ad_archive_id": ad_id,
+            "source": "meta_ads_library",
+            "data_source": data_src,
+            "ad_classification": ad_category,
+            "is_benchmark": is_bench,
+            "country": target_country,
+            "target_country": target_country,
+            "advertiser": advertiser_name,
+            "competitor_name": advertiser_name,
+            "headline": headline_val,
+            "ad_text": body_text,
+            "ad_copy": body_text,
+            "creative_reference": (
+                snapshot.get("pageProfilePictureUrl")
+                or ad.get("video_hd_url")
+                or ad.get("creativeUrl")
+            ),
+            "creative_format": creative_fmt,
+            "cta": cta_val,
+            "active_status": active_status_val,
+            "targeting_evidence": targeting_info,
+            "first_seen": ad.get("startDateFormatted") or ad.get("start_date") or ad.get("firstSeenDate"),
+            "last_seen": ad.get("endDateFormatted") or ad.get("end_date") or ad.get("lastSeenDate"),
+            "published_at": date_meta["published_at"],
+            "published_at_raw": date_meta["published_at_raw"],
+            "published_date_source": date_meta["published_date_source"],
+            "scraped_at": date_meta["scraped_at"],
+            "date_verification_status": date_meta["date_verification_status"],
+            "age_days": date_meta["age_days"],
+            "meta_ads_url": date_meta["meta_ads_url"],
+            "is_within_30_days": date_meta["is_within_30_days"],
+            "landing_page": landing_page_val,
+            "observed_facts": observed_facts,
+            "raw_data": ad,
+        }
+
     async def _run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         campaign_id = input_data["campaign_id"]
         research_job_id = input_data["research_job_id"]
@@ -169,82 +310,24 @@ class AdsManagerAgent(BaseHermesAgent):
         normalized_ads = []
         scrape_time = datetime.now(timezone.utc)
         for ad in raw_ads:
-            ad_id = str(ad.get("id") or ad.get("ad_archive_id") or ad.get("adId", ""))
+            ad_id = str(
+                ad.get("adArchiveId")
+                or ad.get("adArchiveID")
+                or ad.get("id")
+                or ad.get("ad_archive_id")
+                or ad.get("adId")
+                or ""
+            ).strip()
             if not ad_id or ad_id in seen_ids:
                 continue
             seen_ids.add(ad_id)
 
-            # Extract and normalize verifiable publication timestamp
-            date_meta = extract_and_normalize_publication_date(
-                raw_ad=ad,
-                scraped_at=scrape_time,
-                window_days=date_range_days,
+            normalized = self.normalize_ad(
+                ad=ad,
+                target_country=target_country,
+                scrape_time=scrape_time,
+                date_range_days=date_range_days,
             )
-
-            # Determine creative format without inventing
-            creative_fmt = (
-                "video" if (ad.get("video_hd_url") or ad.get("display_format") == "video") else (
-                    "image" if (ad.get("images") or ad.get("image_url") or ad.get("snapshot_url")) else (
-                        "carousel" if (ad.get("cards") or ad.get("carousel_data")) else "text_only"
-                    )
-                )
-            )
-
-            # Determine call to action
-            cta_val = (
-                ad.get("call_to_action_type")
-                or ad.get("cta")
-                or ad.get("cta_text")
-                or (ad.get("ad_creative_link_captions", [None])[0] if isinstance(ad.get("ad_creative_link_captions"), list) and ad.get("ad_creative_link_captions") else None)
-                or ad.get("link_caption")
-            )
-
-            # Active status
-            active_status_val = ad.get("active_status") or ad.get("status") or ("active" if not ad.get("end_date") else "inactive")
-
-            # Targeting evidence
-            targeting_info = ad.get("targeting_evidence")
-            if not targeting_info and ad.get("target_locations"):
-                targeting_info = {"locations": ad.get("target_locations")}
-
-            is_bench = bool(ad.get("is_benchmark") or str(ad_id).startswith("ad_meta_benchmark") or str(ad_id).startswith("ad_meta_ph_benchmark"))
-            data_src = ad.get("data_source") or ("verified_domain_benchmark" if is_bench else "meta_ads_library")
-
-            normalized = {
-                "ad_id": ad_id,
-                "source": "meta_ads_library",
-                "data_source": data_src,
-                "is_benchmark": is_bench,
-                "country": target_country,
-                "advertiser": ad.get("page_name") or ad.get("advertiserName") or "Unknown",
-                "ad_text": (
-                    ad.get("ad_creative_bodies", [None])[0]
-                    or ad.get("body")
-                    or ad.get("adText")
-                ),
-                "creative_reference": (
-                    ad.get("ad_creative_link_captions", [None])[0]
-                    or ad.get("video_hd_url")
-                    or ad.get("creativeUrl")
-                ),
-                "creative_format": creative_fmt,
-                "cta": cta_val,
-                "active_status": active_status_val,
-                "targeting_evidence": targeting_info,
-                "first_seen": ad.get("start_date") or ad.get("firstSeenDate"),
-                "last_seen": ad.get("end_date") or ad.get("lastSeenDate"),
-                "published_at": date_meta["published_at"],
-                "published_at_raw": date_meta["published_at_raw"],
-                "published_date_source": date_meta["published_date_source"],
-                "scraped_at": date_meta["scraped_at"],
-                "date_verification_status": date_meta["date_verification_status"],
-                "age_days": date_meta["age_days"],
-                "meta_ads_url": date_meta["meta_ads_url"],
-                "is_within_30_days": date_meta["is_within_30_days"],
-                "landing_page": ad.get("ad_creative_link_urls", [None])[0] or ad.get("landingPage"),
-                "observed_facts": ad.get("observed_facts", []),
-                "raw_data": ad,
-            }
             normalized_ads.append(normalized)
 
         # Enforce last-30-days research window

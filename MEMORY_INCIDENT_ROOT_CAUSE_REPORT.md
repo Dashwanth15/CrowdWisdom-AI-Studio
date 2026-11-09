@@ -183,3 +183,4 @@ When deploying these changes to Render (`crowdwisdom-ai-studio-backend`):
    - On campaign `6aedab3a1d4c801f02794eb7` (*"The 60-Second Morning Protocol"*), click **Retry Video Agent**.
    - Because peak RSS is bounded to **~246 MB**, the render will complete without OOM restarts.
    - The output video will load with full duration, animated charts, transitions, and audio sync in the web player.
+

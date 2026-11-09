@@ -125,3 +125,4 @@ To refresh your browser state:
    `https://crowdwisdom-ai-studio-ads.onrender.com/campaigns/6aedab3a1d4c801f02794eb7` or `6aece05b17af9898fa44c813`.
 2. Notice that the green **"LIVE FEED"** badge in the header displays connected.
 3. The campaign details, storyboards, creative briefs, and videos load immediately with zero CORS errors.
+

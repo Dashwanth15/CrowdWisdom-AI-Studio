@@ -100,11 +100,11 @@ class ApifyClient:
             if clean_kw:
                 encoded = urllib.parse.quote_plus(clean_kw)
                 start_urls.append({
-                    "url": f"https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country={country}&q={encoded}&sort_data[direction]=desc&sort_data[mode]=relevancy_monthly_grouped"
+                    "url": f"https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country={country}&is_targeted_country=false&media_type=all&q={encoded}&search_type=keyword_unordered"
                 })
         if not start_urls:
             start_urls.append({
-                "url": f"https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country={country}&q=trading&sort_data[direction]=desc&sort_data[mode]=relevancy_monthly_grouped"
+                "url": f"https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country={country}&is_targeted_country=false&media_type=all&q=trading&search_type=keyword_unordered"
             })
 
         input_data = {
@@ -112,24 +112,49 @@ class ApifyClient:
             "resultsLimit": min(max_results, 30),
             "activeStatus": "active",
         }
-        logger.info(f"Starting Meta Ads Apify run for actor {META_ADS_ACTOR_ID}: keywords={keywords}")
+        logger.info(f"Starting Meta Ads Apify run for actor {META_ADS_ACTOR_ID}: country={country}, keywords={keywords}")
         run_id = await self.run_actor(META_ADS_ACTOR_ID, input_data)
         if not run_id:
             raise RuntimeError("Failed to start Apify actor run.")
 
-        success = await self.wait_for_run(run_id, max_wait_seconds=120)
+        success = await self.wait_for_run(run_id, max_wait_seconds=90)
         if not success:
             logger.warning(f"Apify actor run {run_id} did not finish within timeout or returned non-success.")
             return []
 
         items = await self.get_dataset_items(run_id)
-        # Filter out Apify empty/error response records
+        # Filter out Apify empty/error response records, supporting full snapshot schemas
         valid_items = [
             it for it in items 
-            if isinstance(it, dict) and not it.get("error") and (it.get("ad_creative_bodies") or it.get("body") or it.get("adText") or it.get("page_name") or it.get("advertiserName") or it.get("adId") or it.get("id"))
+            if isinstance(it, dict) and not it.get("error") and (
+                it.get("adArchiveId") or it.get("adArchiveID") or it.get("adId") or it.get("id") or
+                it.get("pageName") or it.get("page_name") or it.get("advertiserName") or
+                it.get("snapshot") or it.get("ad_creative_bodies") or it.get("body")
+            )
         ]
-        logger.info(f"Apify returned {len(items)} items ({len(valid_items)} valid ads) for keywords: {keywords}")
+        logger.info(f"Apify returned {len(items)} items ({len(valid_items)} valid ads) for country: {country}")
         return valid_items
+
+    async def get_account_info(self) -> Dict[str, Any]:
+        """Fetch detailed Apify user profile, plan, limits, and compute usage."""
+        try:
+            url = f"{APIFY_BASE_URL}/users/me"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url, headers=self.headers)
+                resp.raise_for_status()
+                data = resp.json().get("data", {})
+                plan = data.get("plan", {})
+                return {
+                    "username": data.get("username", "unknown"),
+                    "email": data.get("email", "unknown"),
+                    "plan_id": plan.get("id", "FREE"),
+                    "is_enabled": plan.get("isEnabled", True),
+                    "monthly_credits_usd": plan.get("monthlyUsageCreditsUsd", 0),
+                    "max_concurrent_runs": plan.get("maxConcurrentActorRuns", 1),
+                }
+        except Exception as e:
+            logger.warning(f"Failed to fetch Apify account details: {e}")
+            return {"error": str(e)}
 
     async def test_connection(self) -> Dict[str, Any]:
         """Test the Apify API connection."""

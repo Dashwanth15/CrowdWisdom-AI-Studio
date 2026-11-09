@@ -14,6 +14,8 @@ from services.market_intelligence import (
     market_intelligence_engine,
     compliance_validator,
 )
+from services.market_intelligence.provider_health_service import provider_health_service
+from services.market_intelligence.market_research_service import market_research_service
 from models.schemas import (
     CountryOverviewOut,
     AudienceSegmentOut,
@@ -25,6 +27,61 @@ from models.schemas import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/market-intelligence", tags=["Market Intelligence"])
+
+
+@router.get("/provider-health")
+async def get_provider_health(
+    current_user: Annotated[dict, Depends(get_current_user)],
+) -> Dict[str, Any]:
+    """Diagnoses and returns real-time operational status, latency, and capabilities across research providers."""
+    return await provider_health_service.check_all_providers()
+
+
+@router.get("/comparison")
+async def get_dual_market_comparison(
+    current_user: Annotated[dict, Depends(get_current_user)],
+) -> Dict[str, Any]:
+    """Returns structured 8-category comparative marketing intelligence between India and the Philippines."""
+    import os
+    import json
+    comp_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "scripts", "market_comparison_output.json")
+    if os.path.exists(comp_file):
+        try:
+            with open(comp_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Error reading market_comparison_output.json: {e}")
+    # Fallback to dual market generator
+    return await market_intelligence_engine.create_dual_market_campaign_variants("Retail Trading Clarity", "IN")
+
+
+@router.get("/competitor-ads")
+async def list_competitor_ads(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    country: Optional[str] = Query(None, description="Target country code: 'IN' or 'PH'"),
+    ad_classification: Optional[str] = Query(None, description="LIVE_META_AD | HISTORICAL_META_AD | VERIFIED_DOMAIN_BENCHMARK"),
+    advertiser: Optional[str] = Query(None, description="Filter by advertiser name"),
+    limit: int = Query(20, ge=1, le=100),
+) -> List[Dict[str, Any]]:
+    """Returns stored competitor advertising intelligence filtered by country, classification, and advertiser."""
+    db = get_database()
+    query: Dict[str, Any] = {}
+    if country:
+        query["country"] = country.upper().strip()
+    if ad_classification:
+        query["ad_classification"] = ad_classification
+    if advertiser:
+        query["advertiser"] = {"$regex": advertiser, "$options": "i"}
+
+    ads = await db.advertisements.find(query).sort([("created_at", -1)]).limit(limit).to_list(limit)
+    result = []
+    for ad in ads:
+        item = dict(ad)
+        if "_id" in item:
+            item["id"] = str(item["_id"])
+            del item["_id"]
+        result.append(item)
+    return result
 
 
 @router.get("/countries")

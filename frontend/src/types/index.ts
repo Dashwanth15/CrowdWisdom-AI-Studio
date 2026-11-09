@@ -217,15 +217,18 @@ export interface Advertisement {
   research_job_id?: string
   ad_id: string
   source: string
+  data_source?: string
+  ad_classification?: 'LIVE_META_AD' | 'HISTORICAL_META_AD' | 'CACHED_AD' | 'VERIFIED_DOMAIN_BENCHMARK' | 'AI_GENERATED_HYPOTHESIS'
+  is_benchmark?: boolean
+  country?: string
   advertiser: string
+  headline?: string
   ad_text?: string
   creative_reference?: string
   cta?: string
   creative_format?: string
   active_status?: string
   targeting_evidence?: Record<string, any>
-  data_source?: string
-  is_benchmark?: boolean
   first_seen?: string
   last_seen?: string
   published_at?: string

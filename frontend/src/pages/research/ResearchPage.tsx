@@ -419,8 +419,46 @@ export const ResearchPage: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Classification & Country Badges */}
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
+                    <div className="flex items-center gap-1">
+                      {ad.ad_classification === 'LIVE_META_AD' ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-[#36B58F]/15 border border-[#36B58F]/40 text-[#36B58F]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#36B58F] animate-pulse" /> LIVE META AD
+                        </span>
+                      ) : ad.ad_classification === 'VERIFIED_DOMAIN_BENCHMARK' || ad.is_benchmark ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-[#C5A46D]/15 border border-[#C5A46D]/40 text-[#C5A46D]">
+                          BENCHMARK AD
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono text-[#7898C4] bg-[#547DB8]/10 border border-[#547DB8]/30">
+                          {ad.ad_classification || 'META AD'}
+                        </span>
+                      )}
+
+                      {ad.country && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-[#10141C] border border-[#232B38] text-[#F2F3F5]">
+                          {ad.country === 'IN' ? '🇮🇳 IN' : ad.country === 'PH' ? '🇵🇭 PH' : ad.country}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {ad.creative_format && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono text-[#A0A7B2] bg-[#101216] border border-[#292E37]">
+                          {ad.creative_format}
+                        </span>
+                      )}
+                      {ad.cta && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono text-[#547DB8] bg-[#547DB8]/10 border border-[#547DB8]/30">
+                          {ad.cta}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Verification Status Badge */}
-                  <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#292E37]/60">
                     {isVerified ? (
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] text-[10px] font-mono text-[#D8DCE4] bg-[#10141C] border border-[#232B38]">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#36B58F] shadow-[0_0_5px_#36B58F]" /> VERIFIED (30D)
@@ -431,8 +469,8 @@ export const ResearchPage: React.FC = () => {
                       </span>
                     )}
 
-                    <CardDescription className="text-[11px] font-mono text-[#727B89]">
-                      Source: {ad.source.replace('_', ' ')}
+                    <CardDescription className="text-[10px] font-mono text-[#727B89]">
+                      ID: {ad.ad_id ? ad.ad_id.slice(-10) : 'N/A'}
                     </CardDescription>
                   </div>
                 </CardHeader>

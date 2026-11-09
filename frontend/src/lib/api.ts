@@ -149,6 +149,9 @@ export const marketIntelligenceApi = {
   getCampaignContext: (campaignId: string) => apiClient.get(`/market-intelligence/campaign/${campaignId}`),
   validateCompliance: (data: { country_code: string; text_content: string; content_type?: string }) =>
     apiClient.post('/market-intelligence/validate-compliance', data),
+  getProviderHealth: () => apiClient.get('/market-intelligence/provider-health'),
+  getComparison: () => apiClient.get('/market-intelligence/comparison'),
+  getCompetitorAds: (params?: any) => apiClient.get('/market-intelligence/competitor-ads', { params }),
 }
 
 export const api = {
