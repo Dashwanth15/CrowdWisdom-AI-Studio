@@ -132,18 +132,33 @@ class TokenResponse(BaseModel):
     user: UserOut
 
 
+class TargetCountry(str, Enum):
+    INDIA = "IN"
+    PHILIPPINES = "PH"
+    BOTH = "BOTH"
+    GLOBAL = "GLOBAL"
+
+
 # --- Campaign Models ---
 
 class AudienceConfig(BaseModel):
     segments: List[str] = ["retail_traders", "options_traders"]
+    target_country: Optional[str] = "IN"
+    target_region: Optional[str] = None
     age_range: Optional[str] = "25-55"
     interests: List[str] = ["trading", "investing", "market_analysis"]
+    experience_level: Optional[str] = "all"
+    preferred_language: Optional[str] = "en"
+    trading_interests: Optional[List[str]] = None
+    financial_education_interests: Optional[List[str]] = None
+    marketing_channels: Optional[List[str]] = None
     custom_description: Optional[str] = None
 
 
 class CampaignCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=200)
     description: Optional[str] = None
+    target_country: Optional[str] = "IN"
     objective: str = "brand_awareness"
     audience: AudienceConfig = AudienceConfig()
     research_approaches: List[ScriptApproach] = [ScriptApproach.PAIN_POINT]
@@ -156,6 +171,7 @@ class CampaignCreate(BaseModel):
 class CampaignUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    target_country: Optional[str] = None
     objective: Optional[str] = None
     audience: Optional[AudienceConfig] = None
     status: Optional[CampaignStatus] = None
@@ -170,6 +186,7 @@ class CampaignOut(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
+    target_country: Optional[str] = "IN"
     objective: str = "brand_awareness"
     status: Union[CampaignStatus, str] = CampaignStatus.DRAFT
     audience: Union[AudienceConfig, Dict[str, Any]] = Field(default_factory=dict)
@@ -486,4 +503,74 @@ class DashboardStats(BaseModel):
     videos_in_progress: int
     agent_success_rate: float
     recent_activity: List[Dict[str, Any]]
+
+
+# --- Market Intelligence Models ---
+
+class CountryOverviewOut(BaseModel):
+    country_code: str
+    country_name: str
+    currency: Dict[str, Any]
+    timezone: str
+    market_hours: str
+    market_ecosystem: Dict[str, Any]
+    regulator: str
+    key_segments_count: int
+    dominant_languages: Dict[str, Any]
+    research_freshness: str
+    updated_at: str
+
+
+class AudienceSegmentOut(BaseModel):
+    segment_id: str
+    name: str
+    experience_level: str
+    typical_age: str
+    primary_focus: List[str]
+    pain_points: List[str]
+    content_preferences: str
+    preferred_languages: List[str]
+    dominant_channels: List[str]
+
+
+class MarketEvidenceOut(BaseModel):
+    id: Optional[str] = None
+    country: str
+    topic: str
+    finding: str
+    source_url: str
+    publisher: str
+    publication_date: Optional[str] = None
+    retrieval_date: str
+    confidence_level: str
+    confidence_score: float
+    evidence_type: str
+    relevant_audience_segment: Optional[str] = None
+    is_verified_fact: bool = True
+    discovery_provider: Optional[str] = None
+
+
+class MarketResearchRequest(BaseModel):
+    country_code: str = "IN"
+    topic: str = "retail trading sentiment"
+    force_refresh: bool = False
+
+
+class ComplianceValidationRequest(BaseModel):
+    country_code: str = "IN"
+    text_content: str
+    content_type: str = "script"
+
+
+class ComplianceValidationOut(BaseModel):
+    country_code: str
+    regulator: str
+    compliance_score: float
+    is_compliant: bool
+    requires_human_review: bool
+    violations: List[Dict[str, str]]
+    warnings: List[Dict[str, str]]
+    mandatory_disclaimers: List[str]
+    required_labeling: str
+
 

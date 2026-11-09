@@ -16,16 +16,24 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+COUNTRY_VOICES: Dict[str, str] = {
+    "IN": "en-IN-PrabhatNeural",
+    "PH": "en-PH-JamesNeural",
+    "GLOBAL": "en-US-ChristopherNeural",
+}
+
+
 class TTSService:
     """
     Synthesizes and synchronizes audible voiceover narration across storyboard scenes.
     Ensures zero mid-word audio truncation and frame-perfect scene alignment.
+    Adapts neural voice locale according to country (India vs Philippines).
     """
 
     def __init__(self, voice: str = "en-US-ChristopherNeural"):
         self.voice = voice
 
-    async def synthesize_scene_audio(self, text: str, output_path: str) -> bool:
+    async def synthesize_scene_audio(self, text: str, output_path: str, voice: Optional[str] = None) -> bool:
         """
         Synthesizes spoken narration for a single scene.
         Attempts edge-tts first; falls back to Windows SAPI if unavailable.
@@ -34,10 +42,12 @@ class TTSService:
         if not clean_text:
             return False
 
+        chosen_voice = voice or self.voice
+
         # Attempt 1: Edge TTS Neural Voice (High fidelity commercial narrator with 6s timeout)
         try:
             import edge_tts
-            communicate = edge_tts.Communicate(clean_text, self.voice, rate="+2%", volume="+5%")
+            communicate = edge_tts.Communicate(clean_text, chosen_voice, rate="+2%", volume="+5%")
             await asyncio.wait_for(communicate.save(output_path), timeout=6.0)
             if Path(output_path).exists() and Path(output_path).stat().st_size > 500:
                 return True
@@ -65,7 +75,7 @@ class TTSService:
         return False
 
     async def synthesize_all_scenes(
-        self, scenes: List[Dict[str, Any]]
+        self, scenes: List[Dict[str, Any]], country_code: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Synthesizes audio for all storyboard scenes ahead of rendering.
@@ -73,6 +83,11 @@ class TTSService:
         """
         from moviepy import AudioFileClip
         results = []
+
+        chosen_voice = self.voice
+        if country_code:
+            norm_c = country_code.upper().strip()
+            chosen_voice = COUNTRY_VOICES.get(norm_c, self.voice)
 
         for idx, sc in enumerate(scenes):
             vo_text = (sc.get("voiceover") or sc.get("on_screen_text") or "").strip()
@@ -85,7 +100,7 @@ class TTSService:
 
             if vo_text:
                 temp_file = Path(tempfile.gettempdir()) / f"cwt_vo_{idx}_{os.getpid()}_{idx}.mp3"
-                success = await self.synthesize_scene_audio(vo_text, str(temp_file))
+                success = await self.synthesize_scene_audio(vo_text, str(temp_file), voice=chosen_voice)
                 if success and temp_file.exists():
                     try:
                         clip = AudioFileClip(str(temp_file))
@@ -105,6 +120,7 @@ class TTSService:
         scenes: List[Dict[str, Any]],
         total_duration: float,
         allocated_durations: Optional[List[float]] = None,
+        country_code: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Generates a continuous, synchronized narration audio track for all scenes.
@@ -115,7 +131,7 @@ class TTSService:
         """
         from moviepy import AudioFileClip, AudioClip, concatenate_audioclips
 
-        speech_results = await self.synthesize_all_scenes(scenes)
+        speech_results = await self.synthesize_all_scenes(scenes, country_code=country_code)
         num_scenes = len(scenes)
 
         # Calculate optimal scene durations driven by actual speech length

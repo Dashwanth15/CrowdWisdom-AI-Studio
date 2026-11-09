@@ -10,6 +10,7 @@ from bson import ObjectId
 from database.connection import get_database
 from models.schemas import CampaignCreate, CampaignOut, CampaignUpdate, CampaignStatus
 from api.auth import get_current_user
+from services.market_intelligence import market_intelligence_engine
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
@@ -53,6 +54,7 @@ async def _enrich_campaign(db, doc: dict) -> CampaignOut:
         id=cid,
         name=doc.get("name") or "Untitled Campaign",
         description=doc.get("description"),
+        target_country=doc.get("target_country") or doc.get("audience", {}).get("target_country") or "IN",
         objective=doc.get("objective", "brand_awareness"),
         status=effective_status,
         audience=doc.get("audience") or {},
@@ -76,6 +78,7 @@ def _serialize_campaign(doc: dict) -> CampaignOut:
         id=str(doc.get("_id", "")),
         name=doc.get("name") or "Untitled Campaign",
         description=doc.get("description"),
+        target_country=doc.get("target_country") or doc.get("audience", {}).get("target_country") or "IN",
         objective=doc.get("objective", "brand_awareness"),
         status=doc.get("status", "draft"),
         audience=doc.get("audience") or {},
@@ -100,9 +103,23 @@ async def create_campaign(
 ):
     db = get_database()
     now = datetime.now(timezone.utc)
+    user_id = str(current_user["_id"])
+
+    # If 'BOTH' markets requested, generate coordinated country-specific campaign variants
+    if data.target_country == "BOTH":
+        variants = await market_intelligence_engine.create_dual_market_campaign_variants(
+            base_campaign_data=data.model_dump(),
+            owner_id=user_id,
+        )
+        # Return the primary created variant (India)
+        first_doc = variants[0]
+        first_doc["_id"] = first_doc.get("id")
+        return _serialize_campaign(first_doc)
+
     doc = {
         **data.model_dump(),
-        "owner_id": str(current_user["_id"]),
+        "target_country": data.target_country or "IN",
+        "owner_id": user_id,
         "status": "draft",
         "ads_researched": 0,
         "scripts_generated": 0,

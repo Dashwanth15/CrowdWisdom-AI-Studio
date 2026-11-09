@@ -14,7 +14,16 @@ export interface TokenResponse {
   user: User
 }
 
+export type TargetCountry = 'IN' | 'PH' | 'BOTH' | 'GLOBAL'
+
 export interface AudienceConfig {
+  target_country?: TargetCountry
+  target_region?: string
+  experience_level?: string
+  preferred_language?: string
+  trading_interests?: string[]
+  financial_education_interests?: string[]
+  marketing_channels?: string[]
   segments?: string[]
   age_range?: string
   interests?: string[]
@@ -31,6 +40,7 @@ export interface Campaign {
   description?: string
   objective: string
   status: CampaignStatus
+  target_country?: TargetCountry
   audience?: AudienceConfig
   research_approaches?: ScriptApproach[]
   video_duration_seconds: number
@@ -326,4 +336,62 @@ export interface WSEvent {
   data?: any
   timestamp?: string
   [key: string]: any
+}
+
+export interface MarketProfile {
+  country_code: string
+  country_name: string
+  currency: string
+  timezone?: string
+  market_hours?: string
+  market_ecosystem?: Record<string, any>
+  regulator: string
+  key_segments_count?: number
+  dominant_languages?: Record<string, any>
+  research_freshness?: string
+  updated_at?: string
+  [key: string]: any
+}
+
+export interface AudienceSegment {
+  segment_id: string
+  name: string
+  experience_level: string
+  typical_age: string
+  primary_focus: string[]
+  pain_points: string[]
+  content_preferences: string
+  preferred_languages: string[]
+  dominant_channels: string[]
+  [key: string]: any
+}
+
+export interface MarketEvidence {
+  id?: string
+  country: string
+  topic: string
+  finding: string
+  source_url: string
+  publisher: string
+  publication_date?: string
+  retrieval_date?: string
+  confidence_level?: string
+  confidence_score: number
+  evidence_type?: string
+  relevant_audience_segment?: string
+  is_verified_fact?: boolean
+  discovery_provider?: string
+  [key: string]: any
+}
+
+export interface ComplianceValidationResult {
+  country_code: string
+  regulator: string
+  compliance_score: number
+  is_compliant: boolean
+  requires_human_review: boolean
+  violations: Array<Record<string, string>>
+  warnings: Array<Record<string, string>>
+  mandatory_disclaimers: string[]
+  required_labeling: string
 }

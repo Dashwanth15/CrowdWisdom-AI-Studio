@@ -145,6 +145,7 @@ from api.videos import router as videos_router
 from api.research import router as research_router
 from api.integrations import router as integrations_router
 from api.creative_briefs import router as creative_briefs_router
+from api.market_intelligence import router as market_intelligence_router
 from api.websocket import router as ws_router
 from api.dashboard import dashboard_router, assets_router, media_router, workflow_router
 
@@ -157,6 +158,7 @@ app.include_router(scripts_router, prefix=API_PREFIX)
 app.include_router(videos_router, prefix=API_PREFIX)
 app.include_router(research_router, prefix=API_PREFIX)
 app.include_router(creative_briefs_router, prefix=API_PREFIX)
+app.include_router(market_intelligence_router, prefix=API_PREFIX)
 app.include_router(integrations_router, prefix=API_PREFIX)
 app.include_router(dashboard_router, prefix=API_PREFIX)
 app.include_router(assets_router, prefix=API_PREFIX)

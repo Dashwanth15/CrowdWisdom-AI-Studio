@@ -92,9 +92,21 @@ class HermesOrchestrator:
         db = get_database()
         idempotency_key = f"research_{campaign_id}"
 
+        # Retrieve campaign target country
+        campaign_doc = await db.campaigns.find_one({"_id": ObjectId(campaign_id)})
+        target_country = (
+            research_input.get("target_country")
+            or (campaign_doc.get("target_country") if campaign_doc else None)
+            or (campaign_doc.get("audience", {}).get("target_country") if campaign_doc else None)
+            or "IN"
+        )
+        if target_country == "BOTH":
+            target_country = "IN"
+
         # 1. Create persistent research job record
         research_job_doc = {
             "campaign_id": campaign_id,
+            "target_country": target_country,
             "status": "pending",
             "keywords": research_input.get("keywords", []),
             "competitor_names": research_input.get("competitor_names", []),
@@ -111,7 +123,7 @@ class HermesOrchestrator:
         research_job_id = str(research_result.inserted_id)
 
         # 2. Create execution record
-        full_input = {**research_input, "campaign_id": campaign_id, "research_job_id": research_job_id}
+        full_input = {**research_input, "campaign_id": campaign_id, "research_job_id": research_job_id, "target_country": target_country}
         execution_id = await self.create_execution(
             campaign_id=campaign_id,
             agent_type="ads_manager",
@@ -170,6 +182,17 @@ class HermesOrchestrator:
         approach = script_input.get("approach", "pain_point")
         approach_label = approach.replace("_", " ").title()
 
+        # Retrieve campaign target country
+        campaign_doc = await db.campaigns.find_one({"_id": ObjectId(campaign_id)})
+        target_country = (
+            script_input.get("target_country")
+            or (campaign_doc.get("target_country") if campaign_doc else None)
+            or (campaign_doc.get("audience", {}).get("target_country") if campaign_doc else None)
+            or "IN"
+        )
+        if target_country == "BOTH":
+            target_country = "IN"
+
         # Clean up any prior unapproved/stale scripts for the same campaign & approach
         # This prevents duplicate pending approval cards from piling up
         await db.scripts.delete_many({
@@ -181,6 +204,7 @@ class HermesOrchestrator:
         # Create persistent script record with explicit generating state
         script_doc = {
             "campaign_id": campaign_id,
+            "target_country": target_country,
             "approach": approach,
             "status": "generating",
             "version": 1,
@@ -218,7 +242,7 @@ class HermesOrchestrator:
             {"$inc": {"scripts_generated": 1}}
         )
 
-        full_input = {**script_input, "campaign_id": campaign_id, "script_id": script_id}
+        full_input = {**script_input, "campaign_id": campaign_id, "script_id": script_id, "target_country": target_country}
         execution_id = await self.create_execution(
             campaign_id=campaign_id,
             agent_type="script",

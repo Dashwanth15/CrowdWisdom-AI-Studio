@@ -3,6 +3,7 @@ CrowdWisdom AI Studio — Script Agent
 Converts research and product knowledge into cinematic advertising scripts.
 Supports three approaches: Pain-Point, Unique-Data, and Product-Value.
 """
+import copy
 import json
 import logging
 import hashlib
@@ -18,6 +19,7 @@ from integrations.exa_client import ExaClient
 from integrations.llm_client import LLMClient
 from services.integration_service import get_decrypted_api_key
 from database.connection import get_database
+from services.market_intelligence import market_context_builder, compliance_validator
 
 logger = logging.getLogger(__name__)
 
@@ -217,14 +219,36 @@ class ScriptAgent(BaseHermesAgent):
 
         db = get_database()
 
-        # Retrieve campaign name for contextual continuity
+        # Retrieve campaign context and target country
         campaign_doc = await db.campaigns.find_one({"_id": ObjectId(campaign_id)})
         campaign_name = campaign_doc.get("name", "Options Volatility Master") if campaign_doc else "CrowdWisdom Trading"
+        target_country = (
+            input_data.get("target_country")
+            or (campaign_doc.get("target_country") if campaign_doc else None)
+            or (campaign_doc.get("audience", {}).get("target_country") if campaign_doc else None)
+            or "IN"
+        )
+        if target_country == "BOTH":
+            target_country = "IN"
+
+        # Build dynamic market intelligence context
+        market_ctx = {}
+        market_prompt_directive = ""
+        try:
+            market_ctx = await market_context_builder.build_context(
+                country_code=target_country,
+                audience_config=campaign_config.get("audience", {}) or (campaign_doc.get("audience", {}) if campaign_doc else {}),
+                include_live_research=True,
+                research_limit=4
+            )
+            market_prompt_directive = market_ctx.get("agent_directives", {}).get("script_agent", "")
+        except Exception as mc_err:
+            logger.warning(f"[ScriptAgent] Market context notice: {mc_err}")
 
         # Update script status
         await db.scripts.update_one(
             {"_id": ObjectId(script_id)},
-            {"$set": {"status": "generating", "updated_at": datetime.now(timezone.utc)}}
+            {"$set": {"status": "generating", "target_country": target_country, "updated_at": datetime.now(timezone.utc)}}
         )
 
         # --- Load credentials ---
@@ -300,12 +324,21 @@ class ScriptAgent(BaseHermesAgent):
 
         if approach == "pain_point":
             research_context, research_references = await self._research_pain_points(
-                tavily_key, exa_key
+                tavily_key, exa_key, country=target_country
             )
         elif approach == "unique_data":
             research_context = await self._gather_product_data(db, campaign_id)
         elif approach == "product_value":
             research_context = await self._research_product_value(exa_key)
+
+        # Inject country market profile and regulatory directives
+        if market_prompt_directive:
+            research_context = f"{market_prompt_directive}\n\n{research_context}"
+
+        # Ingest ground-truth market research evidence into references
+        for ev in market_ctx.get("research_evidence", []):
+            if ev.get("source_url") and ev.get("source_url") not in research_references:
+                research_references.append(f"[{ev.get('publisher')}]: {ev.get('finding')[:120]}... ({ev.get('source_url')})")
 
         # --- Fetch existing ad research for context ---
         await self._log_progress("loading_research", "Loading ad research intelligence...", 25)
@@ -447,7 +480,7 @@ class ScriptAgent(BaseHermesAgent):
 
             # If LLM failed or all attempts rejected, fallback to deterministic domain synthesizer
             if not script_data or not isinstance(script_data, dict):
-                logger.info("[ScriptAgent] Synthesizing script narrative via CrowdWisdom Domain Intelligence Synthesizer...")
+                logger.info(f"[ScriptAgent] Synthesizing script narrative via CrowdWisdom Domain Intelligence Synthesizer for {target_country}...")
                 script_data = self._generate_fallback_script(
                     approach=approach,
                     duration=duration,
@@ -455,6 +488,7 @@ class ScriptAgent(BaseHermesAgent):
                     campaign_id=str(campaign_id),
                     campaign_name=campaign_name,
                     existing_scripts=existing_scripts,
+                    target_country=target_country,
                 )
                 _, script_data, _ = self._validate_and_normalize_script(
                     script_data, approach, duration, campaign_config
@@ -479,10 +513,22 @@ class ScriptAgent(BaseHermesAgent):
                 "scenes": script_data["scenes"],
                 "campaign_title": script_data["campaign_title"],
                 "approach": approach,
+                "target_country": target_country,
             },
             aspect_ratio=aspect_ratio,
         )
+        for sc in enhanced_scenes:
+            sc["target_country"] = target_country
         script_data["scenes"] = enhanced_scenes
+
+        # --- Validate compliance against regulatory standards (SEBI / SEC Philippines) ---
+        full_script_text = f"{script_data.get('campaign_title', '')} {script_data.get('core_message', '')} {script_data.get('voiceover_full', '')}"
+        compliance_report = compliance_validator.validate_content(
+            country_code=target_country,
+            text_content=full_script_text,
+            content_type="script"
+        )
+        logger.info(f"[ScriptAgent] Script compliance score for {target_country}: {compliance_report['compliance_score']}/10.0 (Compliant: {compliance_report['is_compliant']})")
 
         # --- Save validated script to MongoDB ---
         await self._log_progress("saving", "Saving verified script storyboard to database...", 90)
@@ -490,6 +536,8 @@ class ScriptAgent(BaseHermesAgent):
         update_data = {
             "campaign_title": script_data["campaign_title"],
             "title": script_data["campaign_title"],
+            "target_country": target_country,
+            "compliance_report": compliance_report,
             "target_audience": script_data["target_audience"],
             "pain_point": script_data["pain_point"],
             "marketing_angle": script_data["marketing_angle"],
@@ -910,10 +958,12 @@ Generate the complete screenplay in valid JSON:
         return is_valid, normalized_script, errors
 
     async def _research_pain_points(
-        self, tavily_key: Optional[str], exa_key: Optional[str]
+        self, tavily_key: Optional[str], exa_key: Optional[str], country: str = "IN"
     ) -> tuple[str, List[str]]:
-        """Research trading pain points via Tavily/Exa."""
-        await self._log_progress("researching", "Researching trader pain points...", 15)
+        """Research trading pain points via Tavily/Exa with country-specific queries."""
+        norm_country = country.upper().strip() if country else "IN"
+        c_label = "India" if norm_country == "IN" else "Philippines"
+        await self._log_progress("researching", f"Researching {c_label} trader pain points...", 15)
 
         results_text = ""
         references = []
@@ -921,22 +971,25 @@ Generate the complete screenplay in valid JSON:
         if tavily_key:
             try:
                 tavily = TavilyClient(tavily_key)
-                results = await tavily.research_trading_pain_points(days=30)
-                for r in results[:10]:
+                if norm_country == "PH":
+                    q = "Philippine stock market retail investors trading noise sentiment"
+                else:
+                    q = "India retail options trading SEBI sentiment noise"
+                res = await tavily.search(q, max_results=5, days=30)
+                for r in res.get("results", []):
                     results_text += f"\n- {r.get('title', '')}: {r.get('content', '')[:300]}"
                     if r.get("url"):
                         references.append(r["url"])
-                logger.info(f"Tavily returned {len(results)} pain point results")
+                logger.info(f"Tavily returned {len(res.get('results', []))} pain point results for {c_label}")
             except Exception as e:
                 logger.warning(f"Tavily research failed: {e}")
 
         if exa_key and not results_text:
             try:
                 exa = ExaClient(exa_key)
-                results = await exa.find_content_opportunities(
-                    "retail trader frustrations challenges market noise", days_back=30
-                )
-                for r in results[:8]:
+                topic = f"{c_label} retail trader frustrations challenges market noise"
+                results = await exa.find_content_opportunities(topic, days_back=30)
+                for r in results[:6]:
                     results_text += f"\n- {r.get('title', '')}: {(r.get('text') or '')[:300]}"
                     if r.get("url"):
                         references.append(r["url"])
@@ -989,10 +1042,12 @@ Research unavailable (no search provider configured). Using product knowledge co
         campaign_id: str = "",
         campaign_name: str = "",
         existing_scripts: Optional[List[Dict[str, Any]]] = None,
+        target_country: str = "IN",
     ) -> Dict[str, Any]:
         """
         Synthesizes a high-fidelity cinematic commercial screenplay selected from a diverse
         library of creative archetypes. Ensures zero repetitive clichés across campaigns.
+        Dynamically adapts terminology, currencies, and regulatory disclosures to target country (India vs Philippines).
         """
         per_scene = max(4, duration // 4)
         remainder = duration - (per_scene * 4)
@@ -1485,7 +1540,48 @@ Research unavailable (no search provider configured). Using product knowledge co
             available_candidates = candidates
 
         # Deterministically select archetype from available candidates
-        selected = available_candidates[seed_int % len(available_candidates)]
+        selected = copy.deepcopy(available_candidates[seed_int % len(available_candidates)])
+
+        # Localize screenplay to target country (India vs Philippines)
+        norm_country = target_country.upper().strip() if target_country else "IN"
+        if norm_country == "PH":
+            selected["title"] = selected["title"].replace("$10,000", "₱100,000")
+            selected["core"] = selected["core"].replace("retail traders", "Filipino retail investors").replace("Wall Street", "Philippine Stock Exchange")
+            for sc in selected["scenes"]:
+                sc["voiceover"] = (sc.get("voiceover", "")
+                    .replace("$10,000", "₱100,000")
+                    .replace("ten thousand dollars", "one hundred thousand pesos")
+                    .replace("forty contradictory newsletters", "unverified Facebook stock rumors")
+                    .replace("Wall Street", "Philippine Stock Exchange")
+                    .replace("New York", "Bonifacio Global City")
+                    .replace("London", "Makati CBD")
+                    .replace("06:30 AM", "09:15 AM")
+                )
+                sc["on_screen_text"] = (sc.get("on_screen_text", "")
+                    .replace("-$10,450.00", "-₱100,000.00")
+                    .replace("06:30 AM", "09:15 AM")
+                )
+            if not any("SEC" in s.get("on_screen_text", "") for s in selected["scenes"]):
+                selected["scenes"][-1]["on_screen_text"] += " • SEC Philippines Compliance"
+        elif norm_country == "IN":
+            selected["title"] = selected["title"].replace("$10,000", "₹1,00,000")
+            selected["core"] = selected["core"].replace("retail traders", "Indian retail traders").replace("Wall Street", "Dalal Street")
+            for sc in selected["scenes"]:
+                sc["voiceover"] = (sc.get("voiceover", "")
+                    .replace("$10,000", "₹1,00,000")
+                    .replace("ten thousand dollars", "one lakh rupees")
+                    .replace("forty contradictory newsletters", "forty noisy Telegram channels")
+                    .replace("Wall Street", "Dalal Street")
+                    .replace("New York", "Mumbai")
+                    .replace("London", "Bengaluru")
+                    .replace("06:30 AM", "09:00 AM")
+                )
+                sc["on_screen_text"] = (sc.get("on_screen_text", "")
+                    .replace("-$10,450.00", "-₹1,00,000.00")
+                    .replace("06:30 AM", "09:00 AM")
+                )
+            if not any("SEBI" in s.get("on_screen_text", "") for s in selected["scenes"]):
+                selected["scenes"][-1]["on_screen_text"] += " • SEBI Compliant Research"
 
         # Adjust scene durations and guarantee scene_visual_type
         scenes = []

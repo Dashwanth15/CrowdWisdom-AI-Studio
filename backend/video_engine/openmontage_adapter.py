@@ -886,9 +886,22 @@ class OpenMontageAdapter:
         await _update_progress(38, "Synthesizing spoken voiceover narration and frame-perfect sync...")
         from services.tts_service import tts_service
         tts_result = None
+        target_country = "IN"
+        for sc in scenes:
+            if sc.get("target_country"):
+                target_country = sc["target_country"]
+                break
+            if sc.get("country"):
+                target_country = sc["country"]
+                break
+
         try:
             tts_result = await asyncio.wait_for(
-                tts_service.generate_narration_track(scenes_with_assets, float(target_duration)),
+                tts_service.generate_narration_track(
+                    scenes_with_assets,
+                    float(target_duration),
+                    country_code=target_country
+                ),
                 timeout=30.0
             )
             if tts_result:

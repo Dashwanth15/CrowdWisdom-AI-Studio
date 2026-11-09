@@ -137,6 +137,20 @@ export const workflowApi = {
   listTasks: (params?: any) => apiClient.get('/workflows/tasks', { params }),
 }
 
+// Market Intelligence (India 🇮🇳 & Philippines 🇵🇭)
+export const marketIntelligenceApi = {
+  getCountries: () => apiClient.get('/market-intelligence/countries'),
+  getOverview: (country: string) => apiClient.get(`/market-intelligence/${country}/overview`),
+  getAudiences: (country: string, params?: any) => apiClient.get(`/market-intelligence/${country}/audiences`, { params }),
+  getTrends: (country: string, params?: any) => apiClient.get(`/market-intelligence/${country}/trends`, { params }),
+  research: (data: { country: string; query: string; category?: string; max_results?: number }) =>
+    apiClient.post('/market-intelligence/research', data),
+  getRecommendations: (country: string) => apiClient.get(`/market-intelligence/${country}/recommendations`),
+  getCampaignContext: (campaignId: string) => apiClient.get(`/market-intelligence/campaign/${campaignId}`),
+  validateCompliance: (data: { country_code: string; text_content: string; content_type?: string }) =>
+    apiClient.post('/market-intelligence/validate-compliance', data),
+}
+
 export const api = {
   get: apiClient.get,
   post: apiClient.post,

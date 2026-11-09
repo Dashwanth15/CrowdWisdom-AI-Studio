@@ -64,6 +64,7 @@ export const CampaignsPage: React.FC = () => {
   // Create Campaign Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [name, setName] = useState('')
+  const [targetCountry, setTargetCountry] = useState<'IN' | 'PH' | 'BOTH'>('IN')
   const [description, setDescription] = useState('')
   const [objective, setObjective] = useState('brand_awareness')
   const [duration, setDuration] = useState(45)
@@ -93,22 +94,37 @@ export const CampaignsPage: React.FC = () => {
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const defaultSegments =
+        targetCountry === 'PH'
+          ? ['pse_equities_trader', 'ofw_investor', 'young_pro_wealth']
+          : ['retail_traders', 'options_traders', 'swing_traders']
+      const defaultInterests =
+        targetCountry === 'PH'
+          ? ['PSE', 'PSEi', 'dividends', 'financial freedom', 'crypto crossover']
+          : ['trading', 'investing', 'market sentiment', 'Nifty 50', 'options']
+
       const payload = {
         name,
         description,
         objective,
+        target_country: targetCountry,
         video_duration_seconds: Number(duration),
         video_aspect_ratio: aspectRatio,
         creative_direction: creativeDirection,
         additional_instructions: instructions,
         audience: {
-          segments: ['retail_traders', 'options_traders'],
-          interests: ['trading', 'investing', 'market sentiment'],
+          target_country: targetCountry,
+          segments: defaultSegments,
+          interests: defaultInterests,
         },
         research_approaches: ['pain_point', 'unique_data', 'product_value'],
       }
       await campaignsApi.create(payload)
-      toast.success('Campaign created successfully!')
+      toast.success(
+        targetCountry === 'BOTH'
+          ? 'Dual-market campaigns (India 🇮🇳 & Philippines 🇵🇭) generated successfully!'
+          : 'Campaign created successfully!'
+      )
       setIsCreateOpen(false)
       setName('')
       setDescription('')
@@ -148,6 +164,28 @@ export const CampaignsPage: React.FC = () => {
       (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()))
     return matchesStatus && matchesSearch
   })
+
+  const renderCountryBadge = (country?: string) => {
+    if (country === 'PH') {
+      return (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-cyan-950/60 text-cyan-300 border border-cyan-700/50">
+          <span>🇵🇭</span> PH
+        </span>
+      )
+    }
+    if (country === 'BOTH') {
+      return (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-950/60 text-purple-300 border border-purple-700/50">
+          <span>🌐</span> IN+PH
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-950/60 text-amber-300 border border-amber-700/50">
+        <span>🇮🇳</span> IN
+      </span>
+    )
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -204,6 +242,55 @@ export const CampaignsPage: React.FC = () => {
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
                   />
+                </div>
+
+                {/* Country-Specific Market Intelligence Target */}
+                <div className="space-y-1.5">
+                  <Label className="flex items-center justify-between">
+                    <span>Target Financial Market</span>
+                    <span className="text-[10px] text-[#8C9BB3] font-mono">SEBI & SEC Compliant</span>
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTargetCountry('IN')}
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-lg border text-xs transition-all ${
+                        targetCountry === 'IN'
+                          ? 'border-[#3B82F6] bg-[#1E293B] text-white shadow-sm ring-1 ring-[#3B82F6]'
+                          : 'border-[#222E42] bg-[#101622] text-[#94A3B8] hover:border-[#334155]'
+                      }`}
+                    >
+                      <span className="text-base mb-0.5">🇮🇳</span>
+                      <span className="font-semibold text-[11px]">India</span>
+                      <span className="text-[9px] text-[#64748B] font-mono">NSE / Nifty 50</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTargetCountry('PH')}
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-lg border text-xs transition-all ${
+                        targetCountry === 'PH'
+                          ? 'border-[#06B6D4] bg-[#0E2A38] text-white shadow-sm ring-1 ring-[#06B6D4]'
+                          : 'border-[#222E42] bg-[#101622] text-[#94A3B8] hover:border-[#334155]'
+                      }`}
+                    >
+                      <span className="text-base mb-0.5">🇵🇭</span>
+                      <span className="font-semibold text-[11px]">Philippines</span>
+                      <span className="text-[9px] text-[#64748B] font-mono">PSE / PSEi</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTargetCountry('BOTH')}
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-lg border text-xs transition-all ${
+                        targetCountry === 'BOTH'
+                          ? 'border-[#A855F7] bg-[#2E1A47] text-white shadow-sm ring-1 ring-[#A855F7]'
+                          : 'border-[#222E42] bg-[#101622] text-[#94A3B8] hover:border-[#334155]'
+                      }`}
+                    >
+                      <span className="text-base mb-0.5">🌐</span>
+                      <span className="font-semibold text-[11px]">Both Markets</span>
+                      <span className="text-[9px] text-[#64748B] font-mono">Dual Variants</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -388,13 +475,16 @@ export const CampaignsPage: React.FC = () => {
                     className="hover:bg-[#151D2A] transition-all duration-150 group"
                   >
                     <td className="py-3.5 px-4">
-                      <Link
-                        to={`/campaigns/${camp.id}`}
-                        className="font-semibold text-[13px] text-[#FFFFFF] group-hover:text-[#60A5FA] transition-colors flex items-center gap-1.5"
-                      >
-                        <span className="line-clamp-1">{camp.name}</span>
-                        <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-[#60A5FA]" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {renderCountryBadge(camp.target_country || camp.audience?.target_country)}
+                        <Link
+                          to={`/campaigns/${camp.id}`}
+                          className="font-semibold text-[13px] text-[#FFFFFF] group-hover:text-[#60A5FA] transition-colors flex items-center gap-1.5"
+                        >
+                          <span className="line-clamp-1">{camp.name}</span>
+                          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-[#60A5FA]" />
+                        </Link>
+                      </div>
                       <p className="text-[11px] text-[#94A3B8] line-clamp-1 mt-0.5 capitalize">
                         {camp.objective.replace('_', ' ')} • {camp.description || 'Autonomous marketing campaign'}
                       </p>
@@ -496,9 +586,12 @@ export const CampaignsPage: React.FC = () => {
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
-                  <Badge className={getStatusColor(camp.status)}>
-                    {camp.status}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge className={getStatusColor(camp.status)}>
+                      {camp.status}
+                    </Badge>
+                    {renderCountryBadge(camp.target_country || camp.audience?.target_country)}
+                  </div>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] bg-[#141A26] border border-[#222E42] font-mono text-[11px] text-[#CBD5E1]">
                     {camp.video_aspect_ratio} • {camp.video_duration_seconds}s
                   </span>

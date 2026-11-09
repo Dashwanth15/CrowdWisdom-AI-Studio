@@ -13,6 +13,7 @@ from bson import ObjectId
 from integrations.llm_client import LLMClient
 from services.integration_service import get_decrypted_api_key
 from database.connection import get_database
+from services.market_intelligence import market_context_builder
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +53,25 @@ class CreativeIntelligenceEngine:
         """
         db = get_database()
 
-        # 1. Fetch Campaign Context
+        # 1. Fetch Campaign Context & Market Intelligence
         campaign = await db.campaigns.find_one({"_id": ObjectId(campaign_id)})
         if not campaign:
             raise ValueError(f"Campaign {campaign_id} not found.")
+
+        target_country = campaign.get("target_country") or campaign.get("audience", {}).get("target_country") or "IN"
+        if target_country == "BOTH":
+            target_country = "IN"
+
+        market_ctx = {}
+        try:
+            market_ctx = await market_context_builder.build_context(
+                country_code=target_country,
+                audience_config=campaign.get("audience", {}),
+                include_live_research=False,
+                research_limit=4
+            )
+        except Exception as mc_err:
+            logger.warning(f"[CIE] Could not load market context: {mc_err}")
 
         # 2. Fetch Extracted Insights and Researched Ads
         insights = await db.marketing_insights.find({"campaign_id": campaign_id}).to_list(50)
@@ -91,7 +107,16 @@ class CreativeIntelligenceEngine:
             for a in top_ads
         ]
 
+        target_market_name = market_ctx.get("country_name", "Global")
+        target_regulator = market_ctx.get("regulatory_safeguards", {}).get("regulator", "Securities Regulator")
+        disclaimers = market_ctx.get("regulatory_safeguards", {}).get("mandatory_disclaimers", [])
+
         prompt = f"""
+TARGET MARKET: {target_market_name} ({target_country})
+REGULATOR & SAFEGUARDS: {target_regulator}
+MANDATORY DISCLAIMERS: {json.dumps(disclaimers)}
+LOCAL TERMINOLOGY: {json.dumps(market_ctx.get('creative', {}).get('local_terminology', []))}
+
 CAMPAIGN OBJECTIVE: {campaign.get('objective', 'brand_awareness')}
 TARGET AUDIENCE: {json.dumps(campaign.get('audience', {}))}
 CREATIVE DIRECTION: {campaign.get('creative_direction', 'Cinematic financial thriller')}
@@ -217,6 +242,7 @@ Generate a comprehensive Creative Brief in JSON with the following schema:
         brief_doc = {
             "campaign_id": campaign_id,
             "research_job_id": research_job_id,
+            "target_country": target_country,
             "status": "pending_approval",  # Checkpoint 1: Requires approval before script generation
             "version": 1,
             "content": response,
