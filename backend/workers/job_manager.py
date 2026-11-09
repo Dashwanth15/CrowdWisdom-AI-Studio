@@ -3,10 +3,13 @@ CrowdWisdom AI Studio — Persistent Job Manager
 Manages long-running research and video rendering workloads.
 Supports idempotency, task cancellation, crash recovery on boot, and state persistence.
 """
+from __future__ import annotations
+
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Any, Callable, Coroutine, Dict, Optional, Set
+from pathlib import Path
+from typing import Any, Callable, Coroutine, Dict, Optional, Set, Tuple
 from bson import ObjectId
 
 from database.connection import get_database
