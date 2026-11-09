@@ -1,0 +1,154 @@
+{
+  "timestamp": "2026-11-09T08:40:28.206729+00:00",
+  "backend_url": "https://crowdwisdom-ai-studio-backend.onrender.com",
+  "frontend_url": "https://crowdwisdom-ai-studio-ads.onrender.com",
+  "tests": {
+    "backend_health": {
+      "passed": true,
+      "details": {
+        "status": "ok",
+        "service": "CrowdWisdom AI Studio",
+        "version": "1.0.0",
+        "commit": "a5b9d982178d8f978664f49d194f4e60760aba36",
+        "database": "connected",
+        "environment": "production",
+        "memory": {
+          "rss_mb": 89.24,
+          "active_renders": 0,
+          "queued_renders": 0,
+          "limit_mb": 450.0
+        }
+      }
+    },
+    "backend_memory_telemetry": {
+      "passed": true,
+      "details": {
+        "active_tasks_count": 0,
+        "active_renders": 0,
+        "queued_renders": 0,
+        "max_concurrent_renders": 1,
+        "process_memory": {
+          "rss_mb": 89.24,
+          "vms_mb": 769.57
+        },
+        "system_memory": {
+          "total_mb": 31386.71,
+          "available_mb": 10582.75,
+          "used_percent": 66.3
+        }
+      }
+    },
+    "frontend_availability": {
+      "passed": true,
+      "details": {
+        "status": 200,
+        "has_root": true,
+        "length": 1312
+      }
+    },
+    "production_admin_login": {
+      "passed": true,
+      "details": {
+        "status": 200,
+        "token_type": "bearer",
+        "has_token": true,
+        "user_email": "admin@crowdwisdom.ai"
+      }
+    },
+    "reject_invalid_credentials": {
+      "passed": true,
+      "details": {
+        "code": 401,
+        "reason": "Unauthorized"
+      }
+    },
+    "video_head_stage4_verified_advertisement.mp4": {
+      "passed": true,
+      "details": {
+        "status": 200,
+        "content_type": "video/mp4",
+        "content_length": 38070544
+      }
+    },
+    "video_range_seek_stage4_verified_advertisement.mp4": {
+      "passed": true,
+      "details": {
+        "status": 206,
+        "content_range": "bytes 0-65535/38070544",
+        "accept_ranges": "bytes",
+        "sample_bytes_received": 100
+      }
+    },
+    "video_head_city_skyline_dawn_timelapse.mp4": {
+      "passed": true,
+      "details": {
+        "status": 200,
+        "content_type": "video/mp4",
+        "content_length": 33882415
+      }
+    },
+    "video_range_seek_city_skyline_dawn_timelapse.mp4": {
+      "passed": true,
+      "details": {
+        "status": 206,
+        "content_range": "bytes 0-65535/33882415",
+        "accept_ranges": "bytes",
+        "sample_bytes_received": 100
+      }
+    },
+    "video_head_human_trader_typing_terminal.mp4": {
+      "passed": true,
+      "details": {
+        "status": 200,
+        "content_type": "video/mp4",
+        "content_length": 25395455
+      }
+    },
+    "video_range_seek_human_trader_typing_terminal.mp4": {
+      "passed": true,
+      "details": {
+        "status": 206,
+        "content_range": "bytes 0-65535/25395455",
+        "accept_ranges": "bytes",
+        "sample_bytes_received": 100
+      }
+    },
+    "stock_footage_asset_route_city_skyline_dawn_timelapse.mp4": {
+      "passed": true,
+      "details": {
+        "status": 206,
+        "content_range": "bytes 0-1024/33882415",
+        "content_type": "video/mp4"
+      }
+    },
+    "stock_footage_asset_route_human_trader_typing_terminal.mp4": {
+      "passed": true,
+      "details": {
+        "status": 206,
+        "content_range": "bytes 0-1024/25395455",
+        "content_type": "video/mp4"
+      }
+    },
+    "list_production_campaigns": {
+      "passed": true,
+      "details": {
+        "status": 200,
+        "campaign_count": 28
+      }
+    },
+    "list_and_serialize_scripts": {
+      "passed": true,
+      "details": {
+        "status": 200,
+        "script_count": 20,
+        "sample_approaches": [
+          "pain_point",
+          "pain_point",
+          "pain_point"
+        ]
+      }
+    }
+  },
+  "passed": 15,
+  "failed": 0
+}
