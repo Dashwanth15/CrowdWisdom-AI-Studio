@@ -217,6 +217,8 @@ async def health_check():
 
     mem = get_process_memory_mb()
     metrics = job_manager.get_metrics()
+    from services.memory_monitor import get_cgroup_memory
+    cg = get_cgroup_memory()
 
     return {
         "status": "ok",
@@ -227,6 +229,7 @@ async def health_check():
         "environment": settings.APP_ENV,
         "memory": {
             "rss_mb": mem["rss_mb"],
+            "cgroup": cg,
             "active_renders": metrics["active_renders"],
             "queued_renders": metrics["queued_renders"],
             "limit_mb": float(getattr(settings, "VIDEO_RENDER_MEMORY_LIMIT_MB", 450.0)),

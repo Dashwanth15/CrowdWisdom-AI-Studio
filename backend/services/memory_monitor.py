@@ -58,6 +58,83 @@ def get_system_memory_mb() -> Dict[str, float]:
     return {"total_mb": 0.0, "available_mb": 0.0, "used_percent": 0.0}
 
 
+def get_cgroup_memory() -> Dict[str, Any]:
+    """
+    Reads Linux container cgroup v1 or v2 memory controller metrics.
+    Measures total container memory including FFmpeg subprocesses, shared buffers,
+    and kernel page cache. On non-Linux (e.g. Windows dev), safely returns None values.
+    """
+    from pathlib import Path
+    metrics: Dict[str, Any] = {
+        "cgroup_version": None,
+        "current_mb": None,
+        "peak_mb": None,
+        "limit_mb": None,
+        "oom_count": 0,
+        "oom_kill_count": 0,
+    }
+
+    # 1. Probe cgroup v2
+    cg2_current = Path("/sys/fs/cgroup/memory.current")
+    if cg2_current.exists():
+        try:
+            metrics["cgroup_version"] = "v2"
+            metrics["current_mb"] = round(int(cg2_current.read_text().strip()) / (1024 * 1024), 2)
+
+            cg2_peak = Path("/sys/fs/cgroup/memory.peak")
+            if cg2_peak.exists():
+                metrics["peak_mb"] = round(int(cg2_peak.read_text().strip()) / (1024 * 1024), 2)
+
+            cg2_max = Path("/sys/fs/cgroup/memory.max")
+            if cg2_max.exists():
+                txt = cg2_max.read_text().strip()
+                if txt.isdigit():
+                    metrics["limit_mb"] = round(int(txt) / (1024 * 1024), 2)
+
+            cg2_events = Path("/sys/fs/cgroup/memory.events")
+            if cg2_events.exists():
+                for line in cg2_events.read_text().splitlines():
+                    parts = line.strip().split()
+                    if len(parts) == 2:
+                        if parts[0] == "oom":
+                            metrics["oom_count"] = int(parts[1])
+                        elif parts[0] == "oom_kill":
+                            metrics["oom_kill_count"] = int(parts[1])
+            return metrics
+        except Exception as e:
+            logger.debug(f"[MemoryMonitor] cgroup v2 read error: {e}")
+
+    # 2. Probe cgroup v1
+    cg1_usage = Path("/sys/fs/cgroup/memory/memory.usage_in_bytes")
+    if cg1_usage.exists():
+        try:
+            metrics["cgroup_version"] = "v1"
+            metrics["current_mb"] = round(int(cg1_usage.read_text().strip()) / (1024 * 1024), 2)
+
+            cg1_max = Path("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")
+            if cg1_max.exists():
+                metrics["peak_mb"] = round(int(cg1_max.read_text().strip()) / (1024 * 1024), 2)
+
+            cg1_lim = Path("/sys/fs/cgroup/memory/memory.limit_in_bytes")
+            if cg1_lim.exists():
+                txt = cg1_lim.read_text().strip()
+                if txt.isdigit():
+                    val = int(txt)
+                    if val < 9223372036854771712:
+                        metrics["limit_mb"] = round(val / (1024 * 1024), 2)
+
+            cg1_fail = Path("/sys/fs/cgroup/memory/memory.failcnt")
+            if cg1_fail.exists():
+                txt = cg1_fail.read_text().strip()
+                if txt.isdigit():
+                    metrics["oom_count"] = int(txt)
+            return metrics
+        except Exception as e:
+            logger.debug(f"[MemoryMonitor] cgroup v1 read error: {e}")
+
+    return metrics
+
+
 def release_system_memory() -> float:
     """
     Forces Python cyclic garbage collection and instructs the OS C-library (glibc on Linux)
@@ -94,6 +171,7 @@ class MemoryTracker:
         self.limit_mb = limit_mb
         self.initial_rss = 0.0
         self.peak_rss = 0.0
+        self.peak_cgroup_mb = 0.0
         self.final_rss = 0.0
         self.post_gc_rss = 0.0
         self._sampling = False
@@ -103,8 +181,10 @@ class MemoryTracker:
         # Force baseline cleanup before measuring
         release_system_memory()
         mem = get_process_memory_mb()
+        cg = get_cgroup_memory()
         self.initial_rss = mem["rss_mb"]
         self.peak_rss = self.initial_rss
+        self.peak_cgroup_mb = cg.get("current_mb") or 0.0
 
         logger.info(
             f"[MEMORY_MONITOR] Job '{self.job_id}' started | "
@@ -118,11 +198,15 @@ class MemoryTracker:
         return self
 
     async def _sampler_loop(self):
-        """Samples RSS memory every 500ms to catch transient peaks."""
+        """Samples RSS and cgroup memory every 500ms to catch transient peaks."""
         while self._sampling:
             try:
                 mem = get_process_memory_mb()
                 rss = mem["rss_mb"]
+                cg = get_cgroup_memory()
+                cg_mb = cg.get("current_mb")
+                if cg_mb and cg_mb > self.peak_cgroup_mb:
+                    self.peak_cgroup_mb = cg_mb
                 if rss > self.peak_rss:
                     self.peak_rss = rss
                     if self.peak_rss >= self.limit_mb * 0.90:
@@ -157,17 +241,22 @@ class MemoryTracker:
         if self.final_rss > self.peak_rss:
             self.peak_rss = self.final_rss
 
+        cg_final = get_cgroup_memory()
+        if cg_final.get("current_mb") and cg_final["current_mb"] > self.peak_cgroup_mb:
+            self.peak_cgroup_mb = cg_final["current_mb"]
+
         # Perform comprehensive GC and malloc trim
         self.post_gc_rss = release_system_memory()
 
         delta_mb = round(self.post_gc_rss - self.initial_rss, 2)
         status = "FAILED" if exc_type else "COMPLETED"
 
+        cg_info = f" | cgroup Peak: {self.peak_cgroup_mb:.1f} MB (OOM events: {cg_final.get('oom_count', 0)})" if self.peak_cgroup_mb > 0 else ""
         log_level = logging.WARNING if self.peak_rss >= self.limit_mb * 0.85 else logging.INFO
         logger.log(
             log_level,
             f"[MEMORY_MONITOR] Job '{self.job_id}' {status} | "
-            f"Initial: {self.initial_rss:.1f} MB | Peak: {self.peak_rss:.1f} MB | "
+            f"Initial: {self.initial_rss:.1f} MB | Peak RSS: {self.peak_rss:.1f} MB{cg_info} | "
             f"Final: {self.final_rss:.1f} MB | Post-GC: {self.post_gc_rss:.1f} MB | "
             f"Net Delta: {'+' if delta_mb >= 0 else ''}{delta_mb:.1f} MB"
         )

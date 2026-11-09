@@ -798,25 +798,38 @@ export const CampaignDetailPage: React.FC = () => {
 
                                 {scene.visual_asset_url && (
                                   <div className="relative w-full h-28 rounded-md overflow-hidden bg-[#080A0F] border border-[#292E37] group">
-                                    {scene.visual_asset_url.endsWith('.mp4') || (scene as any).media_type === 'video_clip' ? (
-                                      <video
-                                        src={resolveMediaUrl(scene.visual_asset_url)}
-                                        muted
-                                        loop
-                                        autoPlay
-                                        playsInline
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <img
-                                        src={resolveMediaUrl(scene.visual_asset_url)}
-                                        alt={`Scene ${scene.scene_number}`}
-                                        className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
-                                        onError={(e) => {
-                                          ;(e.target as HTMLImageElement).src = '/showcase/cinematic_ad_preview.jpg'
-                                        }}
-                                      />
-                                    )}
+                                    {(() => {
+                                      const isMp4 = scene.visual_asset_url?.toLowerCase().endsWith('.mp4') ||
+                                                    (scene as any).video_asset_url?.toLowerCase().endsWith('.mp4') ||
+                                                    scene.visual_asset_path?.toLowerCase().endsWith('.mp4')
+                                      const videoUrl = isMp4 ? resolveMediaUrl(
+                                        (scene.visual_asset_url?.toLowerCase().endsWith('.mp4') ? scene.visual_asset_url : null) ||
+                                        (scene as any).video_asset_url ||
+                                        (scene.visual_asset_path?.toLowerCase().endsWith('.mp4') ? scene.visual_asset_path : null)
+                                      ) : null
+                                      const posterUrl = resolveMediaUrl(scene.visual_asset_url || scene.visual_asset_path)
+
+                                      return videoUrl ? (
+                                        <video
+                                          src={videoUrl}
+                                          poster={posterUrl}
+                                          muted
+                                          loop
+                                          autoPlay
+                                          playsInline
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <img
+                                          src={posterUrl}
+                                          alt={`Scene ${scene.scene_number}`}
+                                          className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+                                          onError={(e) => {
+                                            ;(e.target as HTMLImageElement).src = '/showcase/cinematic_ad_preview.jpg'
+                                          }}
+                                        />
+                                      )
+                                    })()}
                                     <div className="absolute top-1.5 left-1.5">
                                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] text-[9px] font-mono font-medium bg-[#10141C]/90 backdrop-blur text-[#D8DCE4] border border-[#232B38] shadow">
                                         <span className="w-1.5 h-1.5 rounded-full bg-[#36B58F] shadow-[0_0_5px_#36B58F]" /> READY

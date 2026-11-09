@@ -360,13 +360,14 @@ class JobManager:
 
     def get_metrics(self) -> Dict[str, Any]:
         """Returns background worker telemetry, concurrency, and memory metrics."""
-        from services.memory_monitor import get_process_memory_mb, get_system_memory_mb
+        from services.memory_monitor import get_process_memory_mb, get_system_memory_mb, get_cgroup_memory
         return {
             "active_tasks_count": len([t for t in self._active_tasks.values() if not t.done()]),
             "active_renders": self._active_renders,
             "queued_renders": self._queued_renders,
             "max_concurrent_renders": getattr(settings, "MAX_CONCURRENT_VIDEO_RENDERS", 1),
             "process_memory": get_process_memory_mb(),
+            "cgroup_memory": get_cgroup_memory(),
             "system_memory": get_system_memory_mb(),
         }
 

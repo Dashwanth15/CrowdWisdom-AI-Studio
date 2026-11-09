@@ -22,6 +22,14 @@ async def test_fast_render():
         script = await db.scripts.find_one({"scenes": {"$exists": True, "$ne": []}})
     if not script or not script.get("scenes"):
         pytest.skip("No script with scenes found in database for fast render test.")
+
+    try:
+        import imageio_ffmpeg
+        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        if not ffmpeg_bin or not os.path.exists(ffmpeg_bin):
+            pytest.skip("FFmpeg binary not available on host system.")
+    except Exception as ff_err:
+        pytest.skip(f"FFmpeg binary not available on host system: {ff_err}")
     
     print(f"Testing fast video rendering on script: '{script.get('title')}' with {len(script.get('scenes', []))} scenes...")
 
