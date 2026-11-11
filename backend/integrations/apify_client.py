@@ -117,7 +117,7 @@ class ApifyClient:
         if not run_id:
             raise RuntimeError("Failed to start Apify actor run.")
 
-        success = await self.wait_for_run(run_id, max_wait_seconds=90)
+        success = await self.wait_for_run(run_id, max_wait_seconds=240)
         if not success:
             logger.warning(f"Apify actor run {run_id} did not finish within timeout or returned non-success.")
             return []

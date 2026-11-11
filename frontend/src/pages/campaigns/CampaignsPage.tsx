@@ -172,21 +172,21 @@ export const CampaignsPage: React.FC = () => {
   const renderCountryBadge = (country?: string) => {
     if (country === 'PH') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#0E2A38] text-[#38BDF8] border border-[#0284C7]/60 shadow-xs" title="Target Market: Philippines">
-          <span>🇵🇭</span> PH
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold tracking-wide bg-[#0E2A38] text-[#38BDF8] border border-[#0284C7]/60 shadow-xs" title="Target Market: Philippines (PHP ₱)">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]" /> PH
         </span>
       )
     }
     if (country === 'BOTH') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#2E1A47] text-[#C084FC] border border-[#9333EA]/60 shadow-xs" title="Dual Target: India & Philippines">
-          <span>🌐</span> IN+PH
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold tracking-wide bg-[#2E1A47] text-[#C084FC] border border-[#9333EA]/60 shadow-xs" title="Dual Target: India & Philippines">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#C084FC]" /> IN + PH
         </span>
       )
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#2A1806] text-[#FBBF24] border border-[#D97706]/60 shadow-xs" title="Target Market: India">
-        <span>🇮🇳</span> IN
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold tracking-wide bg-[#2A1806] text-[#FBBF24] border border-[#D97706]/60 shadow-xs" title="Target Market: India (INR ₹)">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#FBBF24]" /> IN
       </span>
     )
   }
