@@ -57,6 +57,7 @@ import toast from 'react-hot-toast'
 export const CampaignsPage: React.FC = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterCountry, setFilterCountry] = useState<'all' | 'IN' | 'PH'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
   const [isLoading, setIsLoading] = useState(true)
@@ -158,30 +159,33 @@ export const CampaignsPage: React.FC = () => {
 
   const filteredCampaigns = campaigns.filter((c) => {
     const matchesStatus = filterStatus === 'all' || c.status === filterStatus
+    const cCountry = c.target_country || c.audience?.target_country || 'IN'
+    const matchesCountry = filterCountry === 'all' || cCountry === filterCountry
     const matchesSearch =
       searchQuery === '' ||
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    return matchesStatus && matchesSearch
+      (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (c.target_country && c.target_country.toLowerCase().includes(searchQuery.toLowerCase()))
+    return matchesStatus && matchesCountry && matchesSearch
   })
 
   const renderCountryBadge = (country?: string) => {
     if (country === 'PH') {
       return (
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-cyan-950/60 text-cyan-300 border border-cyan-700/50">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#0E2A38] text-[#38BDF8] border border-[#0284C7]/60 shadow-xs" title="Target Market: Philippines">
           <span>🇵🇭</span> PH
         </span>
       )
     }
     if (country === 'BOTH') {
       return (
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-950/60 text-purple-300 border border-purple-700/50">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#2E1A47] text-[#C084FC] border border-[#9333EA]/60 shadow-xs" title="Dual Target: India & Philippines">
           <span>🌐</span> IN+PH
         </span>
       )
     }
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-950/60 text-amber-300 border border-amber-700/50">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#2A1806] text-[#FBBF24] border border-[#D97706]/60 shadow-xs" title="Target Market: India">
         <span>🇮🇳</span> IN
       </span>
     )
@@ -388,7 +392,31 @@ export const CampaignsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Country Market Filter Pills */}
+          <div className="flex items-center gap-1 bg-[#131A26] border border-[#222E42] p-1 rounded-lg">
+            {[
+              { id: 'all', label: 'All Markets', icon: '🌐' },
+              { id: 'IN', label: 'India', icon: '🇮🇳' },
+              { id: 'PH', label: 'Philippines', icon: '🇵🇭' },
+            ].map((mkt) => (
+              <button
+                key={mkt.id}
+                onClick={() => setFilterCountry(mkt.id as any)}
+                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono tracking-wider rounded-[5px] transition-all ${
+                  filterCountry === mkt.id
+                    ? 'bg-[#1E293B] text-[#FFFFFF] border border-[#3B82F6] shadow-sm font-semibold'
+                    : 'text-[#8E9BB3] hover:text-[#F1F5F9] hover:bg-[#1A2332]'
+                }`}
+              >
+                <span>{mkt.icon}</span>
+                <span>{mkt.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="h-4 w-[1px] bg-[#222E42] mx-1 hidden sm:block" />
+
           {/* Status Filter Pills */}
           <div className="flex items-center gap-1 bg-[#131A26] border border-[#222E42] p-1 rounded-lg">
             {['all', 'active', 'draft', 'completed', 'paused'].map((status) => (

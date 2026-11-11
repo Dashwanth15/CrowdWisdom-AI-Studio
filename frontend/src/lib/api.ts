@@ -60,6 +60,7 @@ export const campaignsApi = {
   update: (id: string, data: any) => apiClient.patch(`/campaigns/${id}`, data),
   delete: (id: string) => apiClient.delete(`/campaigns/${id}`),
   duplicate: (id: string) => apiClient.post(`/campaigns/${id}/duplicate`),
+  repairLocalization: (id: string) => apiClient.post(`/campaigns/${id}/repair-localization`),
 }
 
 // Agents
@@ -82,6 +83,7 @@ export const scriptsApi = {
   update: (id: string, data: any) => apiClient.patch(`/scripts/${id}`, data),
   delete: (id: string) => apiClient.delete(`/scripts/${id}`),
   clearFailed: () => apiClient.delete('/scripts/clear-failed'),
+  localize: (id: string, country?: string) => apiClient.post(`/scripts/${id}/localize`, { country }),
   getExportUrl: (id: string) => `${apiBaseUrl}/scripts/${id}/export`,
 }
 

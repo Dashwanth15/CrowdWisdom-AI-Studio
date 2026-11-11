@@ -311,6 +311,16 @@ export const CampaignDetailPage: React.FC = () => {
     }
   }
 
+  const handleLocalizeScript = async (scriptId: string) => {
+    try {
+      await scriptsApi.localize(scriptId, campaign?.target_country || 'IN')
+      toast.success('Script localized and currencies aligned to target country!')
+      await loadCampaignDetails(false)
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Failed to localize script')
+    }
+  }
+
   const handleApproveScript = async (script: Script) => {
     // 1. Strict Frontend Validation Gate
     if (script.status === 'generating') {
@@ -323,6 +333,10 @@ export const CampaignDetailPage: React.FC = () => {
     }
     if (!script.core_message || !script.core_message.trim()) {
       toast.error('Validation Error: Script is missing its Core Message. Incomplete scripts cannot be approved.')
+      return
+    }
+    if (script.consistency_report && !script.consistency_report.is_consistent) {
+      toast.error(`Validation Error: Script has unlocalized currency or country mismatches (${script.consistency_report.inconsistencies?.[0]?.issue}). Please click Auto-Repair Currency before approving.`)
       return
     }
 
@@ -825,6 +839,31 @@ export const CampaignDetailPage: React.FC = () => {
                   </CardHeader>
 
                   <CardContent className="pt-4 space-y-4">
+                    {/* Localization Consistency Alert / Quick Repair Banner */}
+                    {script.consistency_report && !script.consistency_report.is_consistent && (
+                      <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-600/50 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start gap-2.5 text-amber-200">
+                          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+                          <div>
+                            <span className="font-semibold block text-amber-300">
+                              Currency/Country Inconsistency Detected
+                            </span>
+                            <p className="text-[11px] text-amber-200/80">
+                              {script.consistency_report.inconsistencies?.[0]?.issue || 'Unlocalized currency reference detected in script storyboard.'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-500/40 shrink-0 font-medium"
+                          onClick={() => handleLocalizeScript(script.id)}
+                        >
+                          Auto-Repair to {campaign?.target_country === 'PH' ? 'PHP (₱)' : 'INR (₹)'}
+                        </Button>
+                      </div>
+                    )}
+
                     {/* Visual Hook Callout */}
                     {script.visual_hook && (
                       <div className="p-3 rounded-lg bg-[#101216] border border-[#292E37] text-xs">

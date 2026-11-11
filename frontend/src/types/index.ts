@@ -123,6 +123,8 @@ export interface Script {
   unique_selling_proposition?: string
   emotional_direction?: string
   visual_hook?: string
+  target_country?: TargetCountry
+  consistency_report?: Record<string, any>
   full_script?: string
   scenes: SceneSpec[]
   voiceover_full?: string

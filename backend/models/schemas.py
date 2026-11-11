@@ -303,6 +303,9 @@ class ScriptOut(BaseModel):
     unique_selling_proposition: Optional[str] = None
     emotional_direction: Optional[str] = None
     visual_hook: Optional[str] = None
+    target_country: Optional[str] = "IN"
+    consistency_report: Optional[Dict[str, Any]] = None
+    compliance_report: Optional[Dict[str, Any]] = None
     full_script: Optional[str] = None
     scenes: List[SceneSpec] = []
     voiceover_full: Optional[str] = None

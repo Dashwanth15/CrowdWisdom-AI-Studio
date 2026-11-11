@@ -11,6 +11,7 @@ from database.connection import get_database
 from models.schemas import CampaignCreate, CampaignOut, CampaignUpdate, CampaignStatus
 from api.auth import get_current_user
 from services.market_intelligence import market_intelligence_engine
+from services.market_intelligence.country_localization_service import country_localization_service
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
@@ -136,6 +137,7 @@ async def create_campaign(
 async def list_campaigns(
     current_user: Annotated[dict, Depends(get_current_user)],
     status: Optional[CampaignStatus] = None,
+    country: Optional[str] = Query(None, description="Filter by target country: IN or PH"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ):
@@ -145,6 +147,22 @@ async def list_campaigns(
     user_id = str(current_user["_id"])
     if user_role not in ("admin", "marketing_manager", "creative_editor"):
         query["owner_id"] = user_id
+
+    if country and country.upper() != "ALL":
+        target = country.upper()
+        if target == "PH":
+            query["$or"] = [
+                {"target_country": "PH"},
+                {"audience.target_country": "PH"}
+            ]
+        elif target == "IN":
+            query["$or"] = [
+                {"target_country": "IN"},
+                {"audience.target_country": "IN"},
+                {"target_country": None},
+                {"target_country": {"$exists": False}}
+            ]
+
     cursor = db.campaigns.find(query).sort("created_at", -1).skip(skip).limit(limit)
     campaigns = await cursor.to_list(limit)
 
@@ -153,6 +171,80 @@ async def list_campaigns(
     if status:
         return [c for c in enriched if c.status == status.value]
     return list(enriched)
+
+
+@router.post("/{campaign_id}/repair-localization")
+async def repair_campaign_localization(
+    campaign_id: str,
+    current_user: Annotated[dict, Depends(get_current_user)],
+):
+    """
+    Audits and repairs unlocalized financial values (such as USD losses or American references)
+    in all scripts of a campaign, aligning them with the campaign's target country.
+    Preserves the original unlocalized copy for audit history.
+    """
+    db = get_database()
+    if not ObjectId.is_valid(campaign_id):
+        raise HTTPException(status_code=400, detail="Invalid campaign ID")
+
+    campaign_doc = await db.campaigns.find_one({"_id": ObjectId(campaign_id)})
+    if not campaign_doc:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    target_country = campaign_doc.get("target_country") or campaign_doc.get("audience", {}).get("target_country") or "IN"
+    scripts = await db.scripts.find({"campaign_id": campaign_id}).to_list(100)
+
+    repaired_count = 0
+    now = datetime.now(timezone.utc)
+
+    for sc in scripts:
+        sc_id = sc["_id"]
+        # Backup original for audit purposes if not already backed up
+        if "original_unlocalized_copy" not in sc:
+            await db.scripts.update_one(
+                {"_id": sc_id},
+                {"$set": {
+                    "original_unlocalized_copy": {
+                        "title": sc.get("title") or sc.get("campaign_title"),
+                        "visual_hook": sc.get("visual_hook"),
+                        "core_message": sc.get("core_message"),
+                        "scenes": sc.get("scenes"),
+                    }
+                }}
+            )
+
+        localized = country_localization_service.localize_script_dict(sc, target_country)
+        consistency_report = country_localization_service.validate_script_country_consistency(localized, target_country)
+
+        await db.scripts.update_one(
+            {"_id": sc_id},
+            {"$set": {
+                "title": localized.get("title"),
+                "campaign_title": localized.get("campaign_title"),
+                "visual_hook": localized.get("visual_hook"),
+                "core_message": localized.get("core_message"),
+                "marketing_angle": localized.get("marketing_angle"),
+                "pain_point": localized.get("pain_point"),
+                "scenes": localized.get("scenes"),
+                "voiceover_full": localized.get("voiceover_full"),
+                "on_screen_texts": localized.get("on_screen_texts"),
+                "call_to_action": localized.get("call_to_action"),
+                "target_country": target_country,
+                "consistency_report": consistency_report,
+                "localization_repaired_at": now,
+                "updated_at": now,
+            },
+            "$inc": {"version": 1}}
+        )
+        repaired_count += 1
+
+    return {
+        "status": "success",
+        "campaign_id": campaign_id,
+        "target_country": target_country,
+        "scripts_repaired": repaired_count,
+        "timestamp": now.isoformat()
+    }
 
 
 @router.get("/{campaign_id}", response_model=CampaignOut)

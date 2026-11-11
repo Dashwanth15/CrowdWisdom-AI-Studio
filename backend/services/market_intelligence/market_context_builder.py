@@ -139,12 +139,26 @@ class MarketContextBuilder:
         ) if evidence else "Evidence: Official regulatory market statistics."
 
         # Prompt for Script Agent
+        curr_directive = (
+            "MANDATORY CURRENCY & NUMBERING FORMAT:\n"
+            "- Currency: Indian Rupees (INR / ₹)\n"
+            "- Numbering: Use Indian Lakhs/Crores (e.g. ₹1,00,000, ₹50,000, ₹10,000, ₹5,000)\n"
+            "- Prohibited: ABSOLUTELY NEVER use USD ($) or US dollar amounts."
+            if country == "IN" else
+            "MANDATORY CURRENCY & NUMBERING FORMAT:\n"
+            "- Currency: Philippine Pesos (PHP / ₱)\n"
+            "- Numbering: Use Thousands/Millions (e.g. ₱100,000, ₱50,000, ₱10,000, ₱5,000)\n"
+            "- Prohibited: ABSOLUTELY NEVER use Indian Rupees (₹) or USD ($)."
+        )
+
         script_prompt_directive = f"""
 ======================================================================
 TARGET COUNTRY: {c_name} ({country})
 TARGET AUDIENCE: {seg_name} ({segment.get('experience_level', 'All')})
 LOCAL LANGUAGE NUANCE: {', '.join(segment.get('preferred_languages', ['English']))}
 LOCAL FINANCIAL TERMINOLOGY TO NATURALLY INTEGRATE: {terms_str}
+
+{curr_directive}
 
 CORE AUDIENCE PAIN POINTS IN {c_name.upper()}:
 {pain_points_str}

@@ -103,6 +103,9 @@ def _serialize_script(doc: dict) -> ScriptOut:
         estimated_duration_seconds=doc.get("estimated_duration_seconds"),
         research_references=doc.get("research_references", []),
         supporting_evidence=doc.get("supporting_evidence", []),
+        target_country=doc.get("target_country") or "IN",
+        consistency_report=doc.get("consistency_report"),
+        compliance_report=doc.get("compliance_report"),
         approved_by=doc.get("approved_by"),
         approved_at=doc.get("approved_at"),
         rejection_reason=doc.get("rejection_reason"),
@@ -296,7 +299,18 @@ async def approve_script(
             detail=f"Validation Error: Total storyboard duration ({total_dur:.1f}s) is too short. Minimum duration is 10.0 seconds.",
         )
 
-    # 7. Visual Assets Verification — Ensure scene visual assets exist and enforce diversity
+    # 7. Country and Currency Consistency Check (Strict Validation Gate)
+    from services.market_intelligence.country_localization_service import country_localization_service
+    target_country = doc.get("target_country") or "IN"
+    consistency = country_localization_service.validate_script_country_consistency(doc, target_country)
+    if not consistency["is_consistent"]:
+        first_issue = consistency["inconsistencies"][0]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Validation Error: Country localization inconsistency detected in {first_issue['field']}: {first_issue['issue']}. Snippet: '{first_issue['snippet']}'. Please repair the script before approval."
+        )
+
+    # 8. Visual Assets Verification — Ensure scene visual assets exist and enforce diversity
     from services.visual_asset_service import visual_asset_service
 
     missing_assets = any(
@@ -472,4 +486,72 @@ async def delete_script(
 
     await db.scripts.delete_one({"_id": ObjectId(script_id)})
     return {"message": "Script deleted successfully.", "script_id": script_id}
+
+
+@router.post("/{script_id}/localize", response_model=ScriptOut)
+async def localize_script(
+    script_id: str,
+    country: Optional[str] = Body(None, embed=True),
+    current_user: Annotated[dict, Depends(get_current_user)] = None,
+):
+    """
+    Directly localizes a script to a specified country (or its campaign target country),
+    repairing any leaked USD values or mismatched references while preserving audit history.
+    """
+    db = get_database()
+    if not ObjectId.is_valid(script_id):
+        raise HTTPException(status_code=400, detail="Invalid script ID.")
+
+    doc = await db.scripts.find_one({"_id": ObjectId(script_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Script not found.")
+
+    target_country = country or doc.get("target_country")
+    if not target_country:
+        camp = await db.campaigns.find_one({"_id": ObjectId(doc["campaign_id"])}) if doc.get("campaign_id") and ObjectId.is_valid(doc["campaign_id"]) else None
+        target_country = camp.get("target_country") if camp else "IN"
+
+    from services.market_intelligence.country_localization_service import country_localization_service
+
+    # Backup original copy for forensic auditing if not already backed up
+    if "original_unlocalized_copy" not in doc:
+        await db.scripts.update_one(
+            {"_id": ObjectId(script_id)},
+            {"$set": {
+                "original_unlocalized_copy": {
+                    "title": doc.get("title") or doc.get("campaign_title"),
+                    "visual_hook": doc.get("visual_hook"),
+                    "core_message": doc.get("core_message"),
+                    "scenes": doc.get("scenes"),
+                }
+            }}
+        )
+
+    localized = country_localization_service.localize_script_dict(doc, target_country)
+    consistency = country_localization_service.validate_script_country_consistency(localized, target_country)
+
+    now = datetime.now(timezone.utc)
+    await db.scripts.update_one(
+        {"_id": ObjectId(script_id)},
+        {"$set": {
+            "title": localized.get("title"),
+            "campaign_title": localized.get("campaign_title"),
+            "visual_hook": localized.get("visual_hook"),
+            "core_message": localized.get("core_message"),
+            "marketing_angle": localized.get("marketing_angle"),
+            "pain_point": localized.get("pain_point"),
+            "scenes": localized.get("scenes"),
+            "voiceover_full": localized.get("voiceover_full"),
+            "on_screen_texts": localized.get("on_screen_texts"),
+            "call_to_action": localized.get("call_to_action"),
+            "target_country": target_country,
+            "consistency_report": consistency,
+            "localization_repaired_at": now,
+            "updated_at": now,
+        },
+        "$inc": {"version": 1}}
+    )
+
+    updated_doc = await db.scripts.find_one({"_id": ObjectId(script_id)})
+    return _serialize_script(updated_doc)
 

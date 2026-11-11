@@ -20,6 +20,7 @@ from integrations.llm_client import LLMClient
 from services.integration_service import get_decrypted_api_key
 from database.connection import get_database
 from services.market_intelligence import market_context_builder, compliance_validator
+from services.market_intelligence.country_localization_service import country_localization_service
 
 logger = logging.getLogger(__name__)
 
@@ -430,6 +431,7 @@ class ScriptAgent(BaseHermesAgent):
                         custom_prompt=custom_prompt,
                         existing_scripts=existing_scripts,
                         rejected_concepts=rejected_concepts,
+                        target_country=target_country,
                     )
 
                     if not concept or not isinstance(concept, dict) or not concept.get("concept_title"):
@@ -444,11 +446,12 @@ class ScriptAgent(BaseHermesAgent):
                         approach=approach,
                         duration=duration,
                         campaign_config=campaign_config,
+                        target_country=target_country,
                     )
 
                     # Validate and normalize screenplay
                     is_valid, normalized_script, val_errors = self._validate_and_normalize_script(
-                        raw_script, approach, duration, campaign_config
+                        raw_script, approach, duration, campaign_config, target_country=target_country
                     )
 
                     if not is_valid and (not normalized_script.get("scenes") or len(normalized_script["scenes"]) < 3):
@@ -589,12 +592,36 @@ class ScriptAgent(BaseHermesAgent):
         custom_prompt: Optional[str],
         existing_scripts: List[Dict[str, Any]],
         rejected_concepts: Optional[List[Dict[str, Any]]] = None,
+        target_country: str = "IN",
     ) -> Dict[str, Any]:
         """
         Stage 1: Dynamic Creative Concept Ideator.
         Generates an original advertising premise, sensory hook, and narrative angle.
         Enforces negative constraints against existing campaign scripts to guarantee genuine diversity.
         """
+        norm_country = target_country.upper().strip() if target_country else "IN"
+        if norm_country not in ("IN", "PH"):
+            norm_country = "IN"
+
+        currency_rule = (
+            "STRICT REGIONAL CURRENCY & FINANCIAL CONTEXT (INDIA 🇮🇳):\n"
+            "- Mandatory Currency: Indian Rupees (₹ / INR)\n"
+            "- Numbering format: Lakhs and Crores (e.g., ₹1,00,000, ₹50,000, ₹10,000, ₹5,000)\n"
+            "- Financial market context: NSE, BSE, Nifty 50, Bank Nifty, Sensex, F&O, Dalal Street, Demat\n"
+            "- Pre-market timing: 09:00 AM IST (NSE Pre-open session)\n"
+            "- Channels & Noise: Noisy Telegram tipsters, WhatsApp rumors\n"
+            "- Prohibited: ABSOLUTELY ZERO USD ($) or American currency references unless international trading is explicitly requested."
+            if norm_country == "IN" else
+            "STRICT REGIONAL CURRENCY & FINANCIAL CONTEXT (PHILIPPINES 🇵🇭):\n"
+            "- Mandatory Currency: Philippine Pesos (₱ / PHP)\n"
+            "- Numbering format: Thousands and Millions (e.g., ₱100,000, ₱50,000, ₱10,000, ₱5,000)\n"
+            "- Financial market context: Philippine Stock Exchange (PSE), PSEi, REITs, Blue Chips, BGC, Makati CBD\n"
+            "- Pre-market timing: 09:15 AM PHT (PSE Pre-open bell)\n"
+            "- Channels & Noise: Unverified Facebook stock groups ('chismis'), hype circles\n"
+            "- Key themes: Protecting OFW remittances, data-driven 'diskarte', 'Bayanihan ng Datos'\n"
+            "- Prohibited: ABSOLUTELY ZERO Indian Rupees (₹) or USD ($) references."
+        )
+
         existing_titles = [
             s.get("campaign_title") or s.get("title") for s in existing_scripts
             if (s.get("campaign_title") or s.get("title"))
@@ -618,7 +645,7 @@ class ScriptAgent(BaseHermesAgent):
             "pain_point": (
                 "Focus on visceral trader friction and emotional exhaustion: "
                 "costly mistakes from following viral social media influencers, "
-                "the anxiety of 6:30 AM pre-market analysis paralysis, "
+                f"the anxiety of {'09:00 AM pre-market' if norm_country == 'IN' else '09:15 AM pre-market'} analysis paralysis, "
                 "getting trapped as exit liquidity, or second-guessing high-stakes trades."
             ),
             "unique_data": (
@@ -638,18 +665,21 @@ class ScriptAgent(BaseHermesAgent):
 Generate a NEW, ORIGINAL, and HIGH-CONVICTION commercial concept for an institutional-grade fintech advertisement.
 
 CAMPAIGN: {campaign_name}
+TARGET COUNTRY: {norm_country}
 APPROACH: {approach.upper()}
 AUDIENCE: {target_audience}
 DURATION: {duration} seconds
+
+{currency_rule}
 
 APPROACH CREATIVE DIRECTIVE:
 {approach_archetype_rules.get(approach, "High-conviction fintech commercial")}
 
 RESEARCH INTELLIGENCE CONTEXT:
-{research_context[:800]}
+{research_context}
 
 MARKETING INSIGHTS:
-{insights_text[:600]}
+{insights_text[:800]}
 
 {f'SPECIAL USER INSTRUCTIONS: {custom_prompt}' if custom_prompt else ''}
 
@@ -674,7 +704,7 @@ Produce a completely original creative concept in valid JSON:
   "concept_title": "Distinct, provocative commercial title (max 6 words)",
   "creative_thesis": "Counter-intuitive advertising premise in 1 sentence",
   "narrative_angle": "The storytelling mechanism (e.g. Confession, Morning Routine, Microstructure, Contrarian, Volatility)",
-  "sensory_hook": "Specific, visceral 3-second opening cinematic visual and sound design",
+  "sensory_hook": "Specific, visceral 3-second opening cinematic visual and sound design (strictly localized currency/environment)",
   "emotional_arc": "Progression from initial tension/doubt to disciplined clarity",
   "visual_composition_style": "Specific lighting, physical environment (e.g. dawn apartment, modern terrace, trading floor), and camera lenses",
   "pain_point": "The authentic trading problem addressed",
@@ -695,17 +725,24 @@ Produce a completely original creative concept in valid JSON:
         approach: str,
         duration: int,
         campaign_config: Dict[str, Any],
+        target_country: str = "IN",
     ) -> Dict[str, Any]:
         """
         Stage 2: Cinematic Screenplay Generator.
         Converts the dynamic creative concept specification into a 4-scene cinematic screenplay.
         Enforces explicit scene_visual_type and strict typographic rules on on_screen_text.
         """
+        norm_country = target_country.upper().strip() if target_country else "IN"
+        if norm_country not in ("IN", "PH"):
+            norm_country = "IN"
+
         per_scene = max(4, duration // 4)
+        sample_loss_headline = "-₹1,00,000.00 • The Cost of Hype" if norm_country == "IN" else "-₱100,000.00 • The Cost of Hype"
 
         screenplay_prompt = f"""You are an award-winning commercial director and screenwriter.
 Transform the following approved Creative Concept into a full 4-scene cinematic advertisement screenplay.
 
+TARGET COUNTRY: {norm_country}
 APPROVED CREATIVE CONCEPT:
 - Title: {concept.get('concept_title', 'Market Clarity')}
 - Thesis: {concept.get('creative_thesis', '')}
@@ -728,12 +765,15 @@ CRITICAL PRODUCTION RULES:
 
 2. ON-SCREEN TEXT TYPOGRAPHY (STRICT):
    - Maximum 4 to 6 words per scene.
-   - Professional institutional headline style (e.g. "Consensus Entries • Verified Stops" or "-$10,450.00 • The Cost of Hype").
+   - Professional institutional headline style (e.g. "Consensus Entries • Verified Stops" or "{sample_loss_headline}").
    - ABSOLUTELY ZERO shouting meme caps ("BUY NOW! DUMP IT! FED HAWKISH? TO THE MOON!").
    - Do NOT simply repeat the voiceover text verbatim.
 
 3. AUTHENTIC TRADER VOICEOVER:
    - Natural human dialogue/monologue under 25 words per scene. No corporate jargon.
+
+4. STRICT REGIONAL CURRENCY & CONTEXT (MANDATORY):
+   {"- India (IN): Use Indian Rupees (₹ / INR) and Indian numbering (e.g., ₹1,00,000, ₹50,000). Context: Dalal Street, NSE, Nifty 50, F&O. NEVER use USD ($)." if norm_country == "IN" else "- Philippines (PH): Use Philippine Pesos (₱ / PHP) (e.g., ₱100,000, ₱50,000). Context: Philippine Stock Exchange (PSE), PSEi, BGC, Makati CBD. NEVER use INR (₹) or USD ($)."}
 
 Generate the complete screenplay in valid JSON:
 {{
@@ -773,10 +813,18 @@ Generate the complete screenplay in valid JSON:
             {"role": "system", "content": SCRIPT_SYSTEM_PROMPT},
             {"role": "user", "content": screenplay_prompt}
         ]
-        return await llm.chat_json(messages=messages, temperature=0.6)
+        raw_res = await llm.chat_json(messages=messages, temperature=0.6)
+        if isinstance(raw_res, dict):
+            raw_res = country_localization_service.localize_script_dict(raw_res, norm_country)
+        return raw_res
 
     def _validate_and_normalize_script(
-        self, script_data: Dict[str, Any], approach: str, duration: int, campaign_config: Dict[str, Any]
+        self,
+        script_data: Dict[str, Any],
+        approach: str,
+        duration: int,
+        campaign_config: Dict[str, Any],
+        target_country: str = "IN",
     ) -> tuple[bool, Dict[str, Any], List[str]]:
         """
         Validates that generated script meets all production requirements:
@@ -953,6 +1001,20 @@ Generate the complete screenplay in valid JSON:
             "estimated_duration_seconds": total_dur or duration,
             "supporting_evidence": script_data.get("supporting_evidence") if isinstance(script_data.get("supporting_evidence"), list) else []
         }
+
+        # Apply robust centralized country localization to eliminate any leaked currencies/terms
+        norm_country = (target_country or "IN").upper().strip()
+        if norm_country not in ("IN", "PH"):
+            norm_country = "IN"
+        normalized_script = country_localization_service.localize_script_dict(normalized_script, norm_country)
+
+        # Run automated consistency verification
+        consistency_report = country_localization_service.validate_script_country_consistency(normalized_script, norm_country)
+        normalized_script["consistency_report"] = consistency_report
+        normalized_script["target_country"] = norm_country
+
+        if not consistency_report["is_consistent"]:
+            logger.warning(f"[ScriptAgent] Script consistency flags detected: {consistency_report['inconsistencies']}")
 
         is_valid = len(errors) == 0
         return is_valid, normalized_script, errors
@@ -1542,46 +1604,12 @@ Research unavailable (no search provider configured). Using product knowledge co
         # Deterministically select archetype from available candidates
         selected = copy.deepcopy(available_candidates[seed_int % len(available_candidates)])
 
-        # Localize screenplay to target country (India vs Philippines)
+        # Localize screenplay to target country (India vs Philippines) using centralized localization service
         norm_country = target_country.upper().strip() if target_country else "IN"
-        if norm_country == "PH":
-            selected["title"] = selected["title"].replace("$10,000", "₱100,000")
-            selected["core"] = selected["core"].replace("retail traders", "Filipino retail investors").replace("Wall Street", "Philippine Stock Exchange")
-            for sc in selected["scenes"]:
-                sc["voiceover"] = (sc.get("voiceover", "")
-                    .replace("$10,000", "₱100,000")
-                    .replace("ten thousand dollars", "one hundred thousand pesos")
-                    .replace("forty contradictory newsletters", "unverified Facebook stock rumors")
-                    .replace("Wall Street", "Philippine Stock Exchange")
-                    .replace("New York", "Bonifacio Global City")
-                    .replace("London", "Makati CBD")
-                    .replace("06:30 AM", "09:15 AM")
-                )
-                sc["on_screen_text"] = (sc.get("on_screen_text", "")
-                    .replace("-$10,450.00", "-₱100,000.00")
-                    .replace("06:30 AM", "09:15 AM")
-                )
-            if not any("SEC" in s.get("on_screen_text", "") for s in selected["scenes"]):
-                selected["scenes"][-1]["on_screen_text"] += " • SEC Philippines Compliance"
-        elif norm_country == "IN":
-            selected["title"] = selected["title"].replace("$10,000", "₹1,00,000")
-            selected["core"] = selected["core"].replace("retail traders", "Indian retail traders").replace("Wall Street", "Dalal Street")
-            for sc in selected["scenes"]:
-                sc["voiceover"] = (sc.get("voiceover", "")
-                    .replace("$10,000", "₹1,00,000")
-                    .replace("ten thousand dollars", "one lakh rupees")
-                    .replace("forty contradictory newsletters", "forty noisy Telegram channels")
-                    .replace("Wall Street", "Dalal Street")
-                    .replace("New York", "Mumbai")
-                    .replace("London", "Bengaluru")
-                    .replace("06:30 AM", "09:00 AM")
-                )
-                sc["on_screen_text"] = (sc.get("on_screen_text", "")
-                    .replace("-$10,450.00", "-₹1,00,000.00")
-                    .replace("06:30 AM", "09:00 AM")
-                )
-            if not any("SEBI" in s.get("on_screen_text", "") for s in selected["scenes"]):
-                selected["scenes"][-1]["on_screen_text"] += " • SEBI Compliant Research"
+        if norm_country not in ("IN", "PH"):
+            norm_country = "IN"
+
+        selected = country_localization_service.localize_script_dict(selected, norm_country)
 
         # Adjust scene durations and guarantee scene_visual_type
         scenes = []
