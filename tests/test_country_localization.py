@@ -156,3 +156,4 @@ def test_deep_script_dict_localization_philippines():
     assert report["inconsistencies_count"] == 0
     assert "USD" not in report["detected_currencies"]
     assert "INR" not in report["detected_currencies"]
+

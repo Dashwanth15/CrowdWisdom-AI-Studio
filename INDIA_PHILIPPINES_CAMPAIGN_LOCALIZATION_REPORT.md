@@ -153,3 +153,4 @@ Clicking the repair button calls `POST /api/scripts/{id}/localize`, which execut
 - [x] **Zero USD Leaks:** Full database audit confirmed 0 scripts with `$`, `USD`, or American trading references in Indian or Philippine campaigns.
 - [x] **Preserved Audit History:** Repaired historical scripts have their previous versions safely preserved in `original_unlocalized_copy`.
 - [x] **Production Verified:** Verified on live MongoDB Atlas instance and tested with end-to-end multi-market generation.
+

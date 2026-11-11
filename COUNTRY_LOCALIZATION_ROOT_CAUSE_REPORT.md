@@ -178,3 +178,4 @@ The root cause of both issues has been completely resolved. The platform now gua
 1. Campaigns targeting India exclusively reference Indian Rupees (`₹` / INR), Indian financial hubs (Dalal Street, Bandra-Kurla Complex), Indian market hours (09:15 AM IST), and SEBI compliance.
 2. Campaigns targeting the Philippines exclusively reference Philippine Pesos (`₱` / PHP), Philippine financial centers (Makati CBD, BGC), Philippine market hours (09:30 AM PHT), and SEC Philippines compliance.
 3. The Campaign Management interface provides immediate filtering between India, Philippines, and all global campaigns.
+
