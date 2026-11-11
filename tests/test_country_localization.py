@@ -157,3 +157,75 @@ def test_deep_script_dict_localization_philippines():
     assert "USD" not in report["detected_currencies"]
     assert "INR" not in report["detected_currencies"]
 
+
+def test_nse_sebi_leak_detection_in_philippines():
+    """Verify that NSE, BSE, Bank Nifty, and SEBI terms are flagged as inconsistencies in PH."""
+    bad_ph_script = {
+        "title": "The Noise Trap — NSE Blue Chip & Dividend Alpha — Philippines 🇵🇭",
+        "core_message": "Trading on Bank Nifty volatility requires SEBI compliance.",
+        "scenes": [
+            {
+                "scene_number": 1,
+                "visual_description": "Close-up macro of trader hands typing rapidly",
+                "voiceover": "Market makers love retail chaos on the NSE.",
+                "on_screen_text": "NSE Volatility Alert"
+            },
+            {
+                "scene_number": 2,
+                "visual_description": "Trader in modern glass office",
+                "voiceover": "Institutional capital uses Demat accounts.",
+                "on_screen_text": "SEBI Compliant Research"
+            }
+        ]
+    }
+    report = country_localization_service.validate_script_country_consistency(bad_ph_script, "PH")
+    assert report["is_consistent"] is False
+    assert report["inconsistencies_count"] >= 3
+    issues = [item["snippet"] for item in report["inconsistencies"]]
+    assert any("NSE" in snip for snip in issues)
+    assert any("SEBI" in snip for snip in issues)
+
+
+def test_cinematic_prompt_macro_separation():
+    """Verify that macro scenes of hands/keyboards do not inject persona facial descriptions."""
+    from services.visual_asset_service import visual_asset_service
+
+    vis_desc = "Close-up macro of an intense trader's hands typing rapidly at a trading workstation amidst flashing sell-off candlestick monitors"
+    prompt = visual_asset_service._construct_cinematic_prompt(
+        scene_num=1,
+        vis_desc=vis_desc,
+        is_product_demo=False,
+        approach="pain_point",
+        aspect_ratio="9:16",
+        campaign_id="test_camp_ph",
+        target_country="PH",
+    )
+    # Must NOT contain facial portrait persona
+    assert "portraying" not in prompt
+    assert "eyes" not in prompt
+    assert "calculating eyes" not in prompt
+    # Must contain macro focusing tokens
+    assert "hands typing rapidly on mechanical keyboard" in prompt
+    assert "no human faces visible" in prompt
+
+
+def test_philippines_regulatory_disclaimer():
+    """Verify that regulatory disclaimer for PH does NOT falsely claim SEC compliance or approval."""
+    script_dict = {
+        "title": "PSE Alpha",
+        "scenes": [
+            {
+                "scene_number": 1,
+                "visual_description": "Makati office view",
+                "voiceover": "Trade with data",
+                "on_screen_text": "CrowdWisdomTrading.com"
+            }
+        ]
+    }
+    localized = country_localization_service.localize_script_dict(script_dict, "PH")
+    final_ost = localized["scenes"][-1]["on_screen_text"]
+    assert "SEC Philippines Disclosures Apply" in final_ost
+    assert "SEC Philippines Approved" not in final_ost
+    assert "SEC Philippines Compliance." not in final_ost
+
+

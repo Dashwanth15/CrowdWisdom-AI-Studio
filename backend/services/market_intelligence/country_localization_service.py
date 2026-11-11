@@ -60,7 +60,7 @@ REGIONAL_VOCABULARY = {
             "Dalal Street", "Nifty 50", "Bank Nifty", "Sensex", "Demat",
             "F&O", "Expiry Day", "Stop-loss", "Telegram tipsters", "Chai and Charts"
         ],
-        "mandatory_disclaimer": "SEBI Compliant Research. Educational and market sentiment research only. Not investment advice.",
+        "mandatory_disclaimer": "For Educational Sentiment Research Only. Subject to SEBI regulatory guidelines. Not investment advice.",
     },
     "PH": {
         "exchanges": ["PSE", "Philippine Stock Exchange"],
@@ -76,7 +76,7 @@ REGIONAL_VOCABULARY = {
             "PSEi", "Philippine Stock Exchange", "BGC", "Makati CBD", "Blue Chips",
             "Chismis", "Diskarte", "Bayanihan", "OFW", "Remittance", "GStocks"
         ],
-        "mandatory_disclaimer": "SEC Philippines Compliance. Educational market intelligence platform. Not personalized investment advice.",
+        "mandatory_disclaimer": "For Educational & Market Sentiment Research Only. SEC Philippines disclosures apply. Not personalized investment advice.",
     }
 }
 
@@ -181,11 +181,15 @@ class CountryLocalizationService:
         disclaimer_tag = f"• {vocab['mandatory_disclaimer']}"
         if localized_scenes:
             final_scene = localized_scenes[-1]
-            ost = final_scene.get("on_screen_text", "")
-            if norm == "IN" and "SEBI" not in ost:
-                final_scene["on_screen_text"] = f"{ost} • SEBI Compliant Research".strip(" •")
-            elif norm == "PH" and "SEC" not in ost:
-                final_scene["on_screen_text"] = f"{ost} • SEC Philippines Compliance".strip(" •")
+            ost = final_scene.get("on_screen_text", "").rstrip(" •")
+            if norm == "IN":
+                if "SEBI" not in ost and "Disclosures" not in ost and "Educational" not in ost:
+                    final_scene["on_screen_text"] = f"{ost} • For Educational Sentiment Research Only (SEBI Disclosures Apply)".strip(" •")
+            elif norm == "PH":
+                if "SEC" not in ost and "Disclosures" not in ost and "Educational" not in ost:
+                    final_scene["on_screen_text"] = f"{ost} • For Educational & Market Sentiment Research Only (SEC Philippines Disclosures Apply)".strip(" •")
+            # Clean up any accidental double bullets
+            final_scene["on_screen_text"] = re.sub(r'•\s*•', '•', final_scene["on_screen_text"]).strip()
 
         out["scenes"] = localized_scenes
         out["target_country"] = norm
@@ -348,7 +352,7 @@ class CountryLocalizationService:
                 })
 
             # Check PHP in IN
-            if norm == "IN" and ("₱" in val or re.search(r'\b(?:PHP|pesos?|PSEi|PSE|BGC|chismis)\b', val, re.I)):
+            if norm == "IN" and ("₱" in val or re.search(r'\b(?:PHP|pesos?|PSEi|PSE|BGC|Makati|Ayala|Ortigas|Bonifacio|SEC Philippines|chismis)\b', val, re.I)):
                 detected_currencies.add("PHP")
                 inconsistencies.append({
                     "field": field_name,
@@ -358,7 +362,7 @@ class CountryLocalizationService:
                 })
 
             # Check INR in PH
-            if norm == "PH" and ("₹" in val or re.search(r'\b(?:INR|rupees?|Nifty|Sensex|SEBI|Dalal Street)\b', val, re.I)):
+            if norm == "PH" and ("₹" in val or re.search(r'\b(?:INR|rupees?|Nifty|Bank\s*Nifty|FinNifty|Sensex|SEBI|NSE|BSE|Dalal Street|Demat|Lakhs?|Crores?|Zerodha|Groww|AngelOne)\b', val, re.I)):
                 detected_currencies.add("INR")
                 inconsistencies.append({
                     "field": field_name,

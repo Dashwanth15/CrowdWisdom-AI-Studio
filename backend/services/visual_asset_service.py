@@ -314,6 +314,7 @@ class VisualAssetService:
         force_refresh: bool = False,
         campaign_id: Optional[str] = None,
         excluded_assets: Optional[Any] = None,
+        target_country: str = "IN",
     ) -> Dict[str, Any]:
         """
         Generates or acquires scene-specific visual assets:
@@ -577,6 +578,7 @@ class VisualAssetService:
                 approach=approach,
                 aspect_ratio=aspect_ratio,
                 campaign_id=campaign_id,
+                target_country=target_country,
             )
             success = await self._fetch_flux_image(prompt, width, height, str(file_path))
         except Exception as e:
@@ -859,6 +861,7 @@ class VisualAssetService:
         scenes = script_doc.get("scenes", [])
         title = script_doc.get("campaign_title") or script_doc.get("title") or "CrowdWisdom Trading"
         approach = script_doc.get("approach", "pain_point")
+        target_country = script_doc.get("target_country") or "IN"
 
         if not scenes:
             return []
@@ -899,6 +902,7 @@ class VisualAssetService:
                     force_refresh=force_refresh,
                     campaign_id=campaign_id,
                     excluded_assets=excluded,
+                    target_country=target_country,
                 )
                 results.append(res)
             except Exception as e:
@@ -985,28 +989,58 @@ class VisualAssetService:
         approach: str,
         aspect_ratio: str,
         campaign_id: Optional[str] = None,
+        target_country: str = "IN",
     ) -> str:
-        """Constructs an authentic documentary cinematography prompt with campaign-aware persona and environment diversity."""
+        """Constructs an authentic documentary cinematography prompt with country-aware personas, authentic financial environments, and strict macro/human scene separation."""
         orientation = "vertical 9:16 portrait composition" if aspect_ratio == "9:16" else "horizontal 16:9 widescreen composition"
         clean_desc = (vis_desc or "").strip().rstrip(".")
+        norm_country = (target_country or "IN").upper().strip()
 
-        # Diverse Persona Profiles (Rotated deterministically per campaign)
-        personas = [
+        # Country-Specific Personas
+        personas_ph = [
+            ("Rafael Santos", "focused 34-year-old Filipino quantitative equity analyst with tailored charcoal blazer and sharp analytical gaze"),
+            ("Maria Clara Reyes", "dynamic 29-year-old Filipina portfolio strategist with tailored cream blouse and focused composure"),
+            ("Mateo Tan", "authoritative 42-year-old Filipino wealth manager in dark navy tailored suit and seasoned composure"),
+            ("Carla Bautista", "dynamic 31-year-old Filipina algorithmic trader with minimalist black blazer and calculating gaze"),
+        ]
+        personas_in = [
+            ("Arjun Mehta", "focused 32-year-old Indian algorithmic options trader with sharp tailored blazer and disciplined intensity"),
+            ("Pooja Sharma", "dynamic 28-year-old Indian quantitative research analyst with crisp formal shirt and analytical focus"),
+            ("Vikram Malhotra", "authoritative 44-year-old Indian portfolio manager with tailored dark suit and seasoned composure"),
+            ("Ananya Rao", "sharp 30-year-old Indian derivatives strategist with elegant navy formal attire and decisive composure"),
+        ]
+        personas_global = [
             ("Marcus Vance", "focused 38-year-old Senior Quantitative Portfolio Manager with sharp tailored navy blazer, titanium glasses, and decisive calm expression"),
             ("Elena Rostova", "intense 32-year-old Algorithmic Options Strategist with sleek dark hair, minimalist black turtleneck, and focused calculating eyes"),
             ("Julian Chen", "sophisticated 41-year-old Chief Risk Architect with charcoal tailored suit, discerning gaze, and immaculate minimalist posture"),
-            ("Sarah Jenkins", "dynamic 29-year-old Quantitative Derivatives Analyst with tailored ivory shirt, focused demeanor, and analytical precision"),
-            ("David Thorne", "authoritative 45-year-old Veteran Proprietary Trader with textured salt-and-pepper hair, open-collar linen dress shirt, and unwavering composure"),
         ]
 
-        # Diverse World Financial District Environments
-        environments = [
+        # Country-Specific Financial Environments
+        environments_ph = [
+            ("Makati Ayala Avenue", "Ayala Avenue Makati central business district, modern architectural glass high-rise, warm morning tropical sunlight"),
+            ("Bonifacio Global City", "BGC Taguig financial district, sleek obsidian and glass financial towers, high-tech trading studio"),
+            ("Ortigas Financial Center", "Ortigas Center modern financial office, floor-to-ceiling glass executive trading floor overlooking city skyline"),
+        ]
+        environments_in = [
+            ("Mumbai BKC", "Bandra-Kurla Complex Mumbai premier financial district, towering glass reflections, warm sunrise golden hour rays"),
+            ("Dalal Street Mumbai", "Dalal Street institutional trading floor, multi-monitor workstation with atmospheric morning light"),
+            ("Bengaluru Tech Park", "Bengaluru financial technology center, modern minimalist glass architecture and trading monitors"),
+        ]
+        environments_global = [
             ("London Canary Wharf", "Canary Wharf London financial district, floor-to-ceiling modern architectural glass, cool overcast British dawn light"),
             ("New York Hudson Yards", "Hudson Yards Manhattan, dramatic towering glass reflections, warm sunrise golden hour rays slicing between skyscrapers"),
-            ("Chicago Loop", "Chicago Mercantile exchange district, deep obsidian and bronze architectural tones, atmospheric dawn mist"),
             ("Singapore Marina Bay", "Marina Bay Financial Centre, sleek tropical dusk architectural towers with distant marina horizon"),
-            ("Frankfurt Banking District", "Frankfurt Financial District, austere European steel and glass architecture with sharp morning ambient light"),
         ]
+
+        if norm_country == "PH":
+            personas = personas_ph
+            environments = environments_ph
+        elif norm_country == "IN":
+            personas = personas_in
+            environments = environments_in
+        else:
+            personas = personas_global
+            environments = environments_global
 
         camp_hash = int(hashlib.md5(f"{campaign_id or 'default_campaign'}".encode()).hexdigest(), 16)
         p_name, p_desc = personas[camp_hash % len(personas)]
@@ -1027,6 +1061,27 @@ class VisualAssetService:
                 f"trader workstation with high-resolution data visualizations, {clean_desc}, {style_tokens}"
             )
 
+        # STRICT MACRO / HANDS / OBJECT SEPARATION:
+        # If the visual description specifies hands, typing, keyboard, or screen macro without a person portrait,
+        # DO NOT append facial persona tokens! This guarantees the image model renders hands typing on a keyboard
+        # rather than a face portrait.
+        desc_lower = clean_desc.lower()
+        is_macro_hands = any(kw in desc_lower for kw in ["hands", "typing", "keyboard", "macro of", "close-up macro", "close-up of", "fingers"])
+        is_device_only = any(kw in desc_lower for kw in ["tablet device", "crowdpulse radar", "candlestick monitors", "oscillating sentiment", "order flow depth"]) and not any(kw in desc_lower for kw in ["person", "trader standing", "analyst in", "standing calmly", "woman", "man"])
+
+        if is_macro_hands:
+            return (
+                f"{clean_desc}, sharp macro photography of trader hands typing rapidly on mechanical keyboard at workstation desk, "
+                f"candlestick charts and financial monitors softly blurred in background with shallow depth of field, "
+                f"no human faces visible, warm desk lamp and monitor glow, candid documentary 35mm photography, {orientation}"
+            )
+
+        if is_device_only:
+            return (
+                f"Extreme close-up macro shot of {clean_desc}, crisp high resolution UI display on executive desk in {env_city}, "
+                f"subtle reflections on sleek glass, soft ambient office lighting, shallow depth of field, {orientation}, 35mm editorial photography, no human faces"
+            )
+
         if clean_desc and len(clean_desc) > 15:
             return f"{clean_desc}, portraying {p_desc} in {env_city}, {style_tokens}"
 
@@ -1034,7 +1089,7 @@ class VisualAssetService:
             1: f"Candid medium shot of {p_desc} at a multi-monitor trading desk at dawn in {env_city}",
             2: f"Intense trading workstation environment with multi-monitor order flow skew and financial analytics in {env_city}",
             3: f"Institutional trading terminal displaying CrowdPulse consensus analytics in {env_city}",
-            4: f"Confident {p_desc} standing calmly by a high-rise office window overlooking the {env_city} skyline at sunrise"
+            4: f"Confident {p_desc} standing calmly by a floor-to-ceiling glass window overlooking the {env_city} skyline at sunrise"
         }
         theme = scene_themes.get(scene_num, f"Authentic candid scene {scene_num} of high-stakes financial trading in {env_city}")
         return f"{theme}, {style_tokens}"

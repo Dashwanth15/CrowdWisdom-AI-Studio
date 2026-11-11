@@ -72,7 +72,9 @@ NARRATIVE ARCHETYPES TO ADAPT:
 Always respond with valid JSON only."""
 
 
-def _tokenize(text: str) -> set:
+def _tokenize(text: Any) -> set:
+    if not text or not isinstance(text, str):
+        return set()
     stop_words = {
         "the", "a", "an", "and", "or", "to", "in", "of", "with", "for", "on", "at",
         "is", "it", "this", "that", "crowdwisdom", "crowdwisdomtrading", "trading",
@@ -88,7 +90,9 @@ def _jaccard(s1: set, s2: set) -> float:
     return len(s1.intersection(s2)) / len(s1.union(s2))
 
 
-def _bigrams(text: str) -> set:
+def _bigrams(text: Any) -> set:
+    if not text or not isinstance(text, str):
+        return set()
     words = [w for w in re.findall(r'[a-zA-Z]{3,}', text.lower())]
     if len(words) < 2:
         return set()
@@ -354,18 +358,26 @@ class ScriptAgent(BaseHermesAgent):
         }).sort("confidence", -1).to_list(10)
 
         # 2. Resilient research inheritance: If no campaign-specific ads exist yet, pull top verified ads & insights
-        # from platform research repository so scripts are ALWAYS backed by real Meta Ads research
+        # from platform research repository filtered strictly by target country so scripts never cross-contaminate markets
+        norm_country = (target_country or "IN").upper().strip()
         if not campaign_ads:
-            logger.info(f"[ScriptAgent] No direct ads associated with campaign {campaign_id}. Inheriting top verified ads from Meta Ads repository.")
+            logger.info(f"[ScriptAgent] No direct ads associated with campaign {campaign_id}. Inheriting top verified {norm_country} ads from Meta Ads repository.")
+            ads_country_filter = {"$in": [norm_country, norm_country.lower(), norm_country.upper()]}
             campaign_ads = await db.advertisements.find({
-                "date_verification_status": "verified"
+                "date_verification_status": "verified",
+                "$or": [{"country": ads_country_filter}, {"target_country": ads_country_filter}]
             }).sort([("evaluation_score.overall", -1), ("published_at", -1)]).to_list(6)
             if not campaign_ads:
-                campaign_ads = await db.advertisements.find({}).sort("evaluation_score.overall", -1).to_list(6)
+                campaign_ads = await db.advertisements.find({
+                    "$or": [{"country": ads_country_filter}, {"target_country": ads_country_filter}]
+                }).sort("evaluation_score.overall", -1).to_list(6)
 
         if not insights:
-            logger.info(f"[ScriptAgent] Inheriting global verified marketing insights for campaign {campaign_id}.")
-            insights = await db.marketing_insights.find({}).sort("confidence", -1).to_list(10)
+            logger.info(f"[ScriptAgent] Inheriting {norm_country} verified marketing insights for campaign {campaign_id}.")
+            insights_country_filter = {"$in": [norm_country, norm_country.lower(), norm_country.upper()]}
+            insights = await db.marketing_insights.find({
+                "$or": [{"country": insights_country_filter}, {"target_country": insights_country_filter}]
+            }).sort("confidence", -1).to_list(10)
 
         # 3. Format competitor ads & insights into human-readable research intelligence for the LLM
         competitor_ads_context = []
@@ -493,8 +505,8 @@ class ScriptAgent(BaseHermesAgent):
                     existing_scripts=existing_scripts,
                     target_country=target_country,
                 )
-                _, script_data, _ = self._validate_and_normalize_script(
-                    script_data, approach, duration, campaign_config
+                is_valid, script_data, val_errors = self._validate_and_normalize_script(
+                    script_data, approach, duration, campaign_config, target_country=target_country
                 )
 
         except Exception as e:
@@ -558,6 +570,8 @@ class ScriptAgent(BaseHermesAgent):
             "estimated_duration_seconds": script_data["estimated_duration_seconds"],
             "research_references": research_references,
             "supporting_evidence": script_data["supporting_evidence"],
+            "target_country": script_data.get("target_country") or target_country,
+            "consistency_report": script_data.get("consistency_report"),
             "status": "pending_approval",  # Checkpoint 2: Ready for human review
             "version": 1,
             "updated_at": datetime.now(timezone.utc),
@@ -824,7 +838,7 @@ Generate the complete screenplay in valid JSON:
         approach: str,
         duration: int,
         campaign_config: Dict[str, Any],
-        target_country: str = "IN",
+        target_country: Optional[str] = None,
     ) -> tuple[bool, Dict[str, Any], List[str]]:
         """
         Validates that generated script meets all production requirements:
@@ -1003,7 +1017,15 @@ Generate the complete screenplay in valid JSON:
         }
 
         # Apply robust centralized country localization to eliminate any leaked currencies/terms
-        norm_country = (target_country or "IN").upper().strip()
+        # Resolve target country hierarchically: explicit argument -> script_data -> campaign_config -> default "IN"
+        resolved_country = (
+            target_country
+            or script_data.get("target_country")
+            or campaign_config.get("target_country")
+            or campaign_config.get("country")
+            or "IN"
+        )
+        norm_country = str(resolved_country).upper().strip()
         if norm_country not in ("IN", "PH"):
             norm_country = "IN"
         normalized_script = country_localization_service.localize_script_dict(normalized_script, norm_country)
@@ -1225,55 +1247,107 @@ Research unavailable (no search provider configured). Using product knowledge co
         }
 
         # Archetype 3: Whistleblower / Microstructure ("The Noise Trap")
-        archetype_whistleblower = {
-            "title": f"The Noise Trap — {campaign_name or 'Institutional Intel'}",
-            "core": "Financial media and news channels are built to trigger emotional overtrading. CrowdWisdom cuts through the noise with quantitative crowd metrics.",
-            "pain_point": "Sensationalized financial news driving costly emotional overtrading",
-            "marketing_angle": "Exposing retail noise traps and replacing them with Pro Crowd conviction",
-            "hook": "Close-up macro of an intense trader's hands typing rapidly at a trading workstation amidst flashing sell-off candlestick monitors and conflicting alerts.",
-            "scenes": [
-                {
-                    "scene_number": 1,
-                    "duration_seconds": per_scene,
-                    "visual_description": "Close-up macro of an intense trader's hands typing rapidly at a trading workstation amidst flashing sell-off candlestick monitors and conflicting financial news alerts.",
-                    "camera_direction": "Fast vertigo zoom zooming in while dollying out on chaotic screens",
-                    "voiceover": "Market makers love retail chaos. The more conflicting alerts you receive, the more emotional mistakes you make.",
-                    "on_screen_text": "Conflicting Newsfeeds = Emotional Drawdowns",
-                    "audio_direction": "Tense low-frequency drone with rapid ticker clicks",
-                    "transition": "Fast motion blur wipe"
-                },
-                {
-                    "scene_number": 2,
-                    "duration_seconds": per_scene,
-                    "visual_description": "Professional quantitative analyst in a modern glass office intently studying live multi-monitor order flow skew, depth-of-market histograms, and institutional consensus charts.",
-                    "camera_direction": "Cinematic drone glide between towering glass financial skyscrapers at dusk",
-                    "voiceover": "Institutional algorithms don't read sensational headlines. They measure aggregate crowd conviction and order flow skew.",
-                    "on_screen_text": "Don't Trade the News. Trade Collective Conviction.",
-                    "audio_direction": "Crescendo of distorted audio chatter cutting to dead silence",
-                    "transition": "Clean vertical split wipe"
-                },
-                {
-                    "scene_number": 3,
-                    "duration_seconds": per_scene,
-                    "visual_description": "Extreme close-up on modern tablet device on an executive desk displaying the CrowdPulse institutional conviction radar, oscillating sentiment waveforms, and live accumulation telemetry.",
-                    "camera_direction": "Smooth linear pan across clean emerald and cyan consensus curves",
-                    "voiceover": "CrowdWisdom's Pro Crowd Bars aggregate real trader expectations, revealing true consensus before the market moves.",
-                    "on_screen_text": "Pro Crowd Bars: Real-Time Trader Conviction",
-                    "audio_direction": "Crisp harmonic synthesizer chord with clean UI haptic chime",
-                    "transition": "Cross-dissolve with light bloom"
-                },
-                {
-                    "scene_number": 4,
-                    "duration_seconds": per_scene + remainder,
-                    "visual_description": "Professional trader standing calmly by a floor-to-ceiling glass window in a modern financial office overlooking the city skyline at dawn, confident and decisive.",
-                    "camera_direction": "Wide cinematic pull-back showing complete serenity in the center of the financial capital",
-                    "voiceover": "Stop feeding the noise machine. Trade what the data shows at CrowdWisdomTrading.com.",
-                    "on_screen_text": "CrowdWisdomTrading.com — Trade What the Data Shows",
-                    "audio_direction": "Triumphant musical resolution",
-                    "transition": "Fade to brand logo"
-                }
-            ]
-        }
+        norm_country_whistle = (target_country or "IN").upper().strip()
+        if norm_country_whistle == "PH":
+            archetype_whistleblower = {
+                "title": f"The Noise Trap — {campaign_name or 'PSE Market Intelligence'}",
+                "core": "Unverified social media tips and market rumors trigger emotional overtrading on the Philippine Stock Exchange. CrowdWisdom cuts through the noise with verified crowd conviction metrics.",
+                "pain_point": "Trading on unverified social media stock tips and emotional volatility in the PSE",
+                "marketing_angle": "Replacing speculative group chat rumors with mathematically verified PSE crowd consensus",
+                "hook": "Close-up macro of an intense trader's hands typing rapidly at a trading workstation amidst flashing sell-off candlestick monitors and conflicting alerts.",
+                "scenes": [
+                    {
+                        "scene_number": 1,
+                        "duration_seconds": per_scene,
+                        "visual_description": "Close-up macro of an intense trader's hands typing rapidly on a mechanical keyboard at a trading workstation amidst flashing sell-off candlestick monitors and conflicting alert feeds, shallow depth of field, no visible faces.",
+                        "camera_direction": "Fast vertigo zoom zooming in while dollying out on chaotic screens",
+                        "voiceover": "In Philippine equities, unverified social media tips and emotional panic drive retail drawdowns. The more conflicting alerts you chase, the faster capital evaporates.",
+                        "on_screen_text": "Social Media Rumors vs. PSE Market Reality",
+                        "audio_direction": "Tense low-frequency drone with rapid ticker clicks",
+                        "transition": "Fast motion blur wipe"
+                    },
+                    {
+                        "scene_number": 2,
+                        "duration_seconds": per_scene,
+                        "visual_description": "Professional quantitative analyst in a modern glass office intently studying live multi-monitor order flow skew, depth-of-market histograms, and institutional consensus charts.",
+                        "camera_direction": "Cinematic drone glide between towering glass financial skyscrapers at dusk",
+                        "voiceover": "Institutional capital in Manila doesn't trade on unverified chat tips. Real market edge comes from tracking disciplined volume flows and verified collective conviction.",
+                        "on_screen_text": "Don't Trade Rumors. Trade Collective Conviction.",
+                        "audio_direction": "Crescendo of distorted audio chatter cutting to dead silence",
+                        "transition": "Clean vertical split wipe"
+                    },
+                    {
+                        "scene_number": 3,
+                        "duration_seconds": per_scene,
+                        "visual_description": "Extreme close-up on modern tablet device on an executive desk displaying the CrowdPulse institutional conviction radar, oscillating sentiment waveforms, and live accumulation telemetry.",
+                        "camera_direction": "Smooth linear pan across clean emerald and cyan consensus curves",
+                        "voiceover": "CrowdWisdom's Pro Crowd Bars aggregate real trader expectations across Philippine blue chips, revealing true consensus before the market moves.",
+                        "on_screen_text": "Pro Crowd Bars: Real-Time PSE Market Conviction",
+                        "audio_direction": "Crisp harmonic synthesizer chord with clean UI haptic chime",
+                        "transition": "Cross-dissolve with light bloom"
+                    },
+                    {
+                        "scene_number": 4,
+                        "duration_seconds": per_scene + remainder,
+                        "visual_description": "Professional trader standing calmly by a floor-to-ceiling glass window in a modern financial office overlooking the city skyline at dawn, confident and decisive.",
+                        "camera_direction": "Wide cinematic pull-back showing complete serenity in the center of the financial capital",
+                        "voiceover": "Stop feeding the noise machine. Trade what verified data shows at CrowdWisdomTrading.com.",
+                        "on_screen_text": "CrowdWisdomTrading.com — For Educational & Market Sentiment Research Only (SEC Philippines Disclosures Apply)",
+                        "audio_direction": "Triumphant musical resolution",
+                        "transition": "Fade to brand logo"
+                    }
+                ]
+            }
+        else:
+            archetype_whistleblower = {
+                "title": f"The Noise Trap — {campaign_name or 'NSE Market Intelligence'}",
+                "core": "Sensationalized Telegram channels and unverified tips drive costly emotional overtrading in Indian markets. CrowdWisdom cuts through the noise with verified crowd metrics.",
+                "pain_point": "Sensationalized financial news and Telegram tips driving costly emotional overtrading",
+                "marketing_angle": "Exposing retail noise traps and replacing them with Pro Crowd conviction",
+                "hook": "Close-up macro of an intense trader's hands typing rapidly at a trading workstation amidst flashing sell-off candlestick monitors and conflicting alerts.",
+                "scenes": [
+                    {
+                        "scene_number": 1,
+                        "duration_seconds": per_scene,
+                        "visual_description": "Close-up macro of an intense trader's hands typing rapidly on a mechanical keyboard at a trading workstation amidst flashing sell-off candlestick monitors and conflicting financial news alerts, shallow depth of field, no visible faces.",
+                        "camera_direction": "Fast vertigo zoom zooming in while dollying out on chaotic screens",
+                        "voiceover": "Viral Telegram channels and contradictory market tips cost Indian retail traders millions in sudden options drawdowns. Conflicting alerts trigger costly emotional mistakes.",
+                        "on_screen_text": "Telegram Hype vs. NSE Capital Protection",
+                        "audio_direction": "Tense low-frequency drone with rapid ticker clicks",
+                        "transition": "Fast motion blur wipe"
+                    },
+                    {
+                        "scene_number": 2,
+                        "duration_seconds": per_scene,
+                        "visual_description": "Professional quantitative analyst in a modern glass office intently studying live multi-monitor order flow skew, depth-of-market histograms, and institutional consensus charts.",
+                        "camera_direction": "Cinematic drone glide between towering glass financial skyscrapers at dusk",
+                        "voiceover": "Institutional capital on Dalal Street doesn't trade on social media chatter. They measure aggregate crowd conviction and order flow skew.",
+                        "on_screen_text": "Don't Trade the News. Trade Collective Conviction.",
+                        "audio_direction": "Crescendo of distorted audio chatter cutting to dead silence",
+                        "transition": "Clean vertical split wipe"
+                    },
+                    {
+                        "scene_number": 3,
+                        "duration_seconds": per_scene,
+                        "visual_description": "Extreme close-up on modern tablet device on an executive desk displaying the CrowdPulse institutional conviction radar, oscillating sentiment waveforms, and live accumulation telemetry.",
+                        "camera_direction": "Smooth linear pan across clean emerald and cyan consensus curves",
+                        "voiceover": "CrowdWisdom's Pro Crowd Bars aggregate real trader expectations, revealing true consensus before the market moves.",
+                        "on_screen_text": "Pro Crowd Bars: Real-Time Trader Conviction",
+                        "audio_direction": "Crisp harmonic synthesizer chord with clean UI haptic chime",
+                        "transition": "Cross-dissolve with light bloom"
+                    },
+                    {
+                        "scene_number": 4,
+                        "duration_seconds": per_scene + remainder,
+                        "visual_description": "Professional trader standing calmly by a floor-to-ceiling glass window in a modern financial office overlooking the city skyline at dawn, confident and decisive.",
+                        "camera_direction": "Wide cinematic pull-back showing complete serenity in the center of the financial capital",
+                        "voiceover": "Stop feeding the noise machine. Trade what the data shows at CrowdWisdomTrading.com.",
+                        "on_screen_text": "CrowdWisdomTrading.com — For Educational & Sentiment Research Only (SEBI Disclosures Apply)",
+                        "audio_direction": "Triumphant musical resolution",
+                        "transition": "Fade to brand logo"
+                    }
+                ]
+            }
 
         # Archetype 4: Quantitative Alpha ("The 1978 Indicator Trap")
         archetype_quant = {
